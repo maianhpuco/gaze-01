@@ -29,6 +29,48 @@ The EGD-CXR (Eye Gaze Data for Chest X-Ray) dataset is a comprehensive collectio
 ### 1. master_sheet.csv (1,417 rows)
 **Description**: Main metadata file containing patient information, diagnostic labels, and study details.
 
+**Column Descriptions**:
+- **dicom_id**: Unique identifier for the DICOM image file
+- **path**: File path to the DICOM image within the dataset
+- **study_id**: Unique identifier for the radiology study
+- **patient_id**: Unique identifier for the patient
+- **stay_id**: Unique identifier for the hospital stay
+- **gender**: Patient gender (F/M)
+- **anchor_age**: Patient age range (e.g., "20 - 30")
+- **image_top_pad, image_bottom_pad, image_left_pad, image_right_pad**: Padding values for image preprocessing
+- **dx1-dx9**: Primary to ninth diagnosis codes
+- **dx1_icd-dx9_icd**: Corresponding ICD-10 diagnosis codes
+- **normal_reports**: Flag indicating if reports are normal
+- **Normal**: Binary label for normal cases (0/1)
+- **CHF**: Binary label for Congestive Heart Failure (0/1)
+- **pneumonia**: Binary label for pneumonia (0/1)
+- **consolidation**: Binary label for lung consolidation (0/1)
+- **enlarged_cardiac_silhouette**: Binary label for enlarged cardiac silhouette (0/1)
+- **linear__patchy_atelectasis**: Binary label for linear/patchy atelectasis (0/1)
+- **lobar__segmental_collapse**: Binary label for lobar/segmental collapse (0/1)
+- **not_otherwise_specified_opacity___pleural__parenchymal_opacity__**: Binary label for unspecified opacity (0/1)
+- **pleural_effusion_or_thickening**: Binary label for pleural effusion/thickening (0/1)
+- **pulmonary_edema__hazy_opacity**: Binary label for pulmonary edema (0/1)
+- **normal_anatomically**: Binary label for anatomically normal (0/1)
+- **elevated_hemidiaphragm**: Binary label for elevated hemidiaphragm (0/1)
+- **hyperaeration**: Binary label for hyperaeration (0/1)
+- **vascular_redistribution**: Binary label for vascular redistribution (0/1)
+- **atelectasis__chx**: CheXpert label for atelectasis (-1/0/1)
+- **cardiomegaly__chx**: CheXpert label for cardiomegaly (-1/0/1)
+- **consolidation__chx**: CheXpert label for consolidation (-1/0/1)
+- **edema__chx**: CheXpert label for edema (-1/0/1)
+- **enlarged_cardiomediastinum__chx**: CheXpert label for enlarged cardiomediastinum (-1/0/1)
+- **fracture__chx**: CheXpert label for fracture (-1/0/1)
+- **lung_lesion__chx**: CheXpert label for lung lesion (-1/0/1)
+- **lung_opacity__chx**: CheXpert label for lung opacity (-1/0/1)
+- **no_finding__chx**: CheXpert label for no finding (-1/0/1)
+- **pleural_effusion__chx**: CheXpert label for pleural effusion (-1/0/1)
+- **pleural_other__chx**: CheXpert label for other pleural findings (-1/0/1)
+- **pneumonia__chx**: CheXpert label for pneumonia (-1/0/1)
+- **pneumothorax__chx**: CheXpert label for pneumothorax (-1/0/1)
+- **support_devices__chx**: CheXpert label for support devices (-1/0/1)
+- **cxr_exam_indication**: Clinical indication for the chest X-ray examination
+
 **First 3 rows sample**:
 ```csv
 dicom_id,path,study_id,patient_id,stay_id,gender,anchor_age,image_top_pad,image_bottom_pad,image_left_pad,image_right_pad,dx1,dx1_icd,dx2,dx2_icd,dx3,dx3_icd,dx4,dx4_icd,dx5,dx5_icd,dx6,dx6_icd,dx7,dx7_icd,dx8,dx8_icd,dx9,dx9_icd,normal_reports,Normal,CHF,pneumonia,consolidation,enlarged_cardiac_silhouette,linear__patchy_atelectasis,lobar__segmental_collapse,not_otherwise_specified_opacity___pleural__parenchymal_opacity__,pleural_effusion_or_thickening,pulmonary_edema__hazy_opacity,normal_anatomically,elevated_hemidiaphragm,hyperaeration,vascular_redistribution,atelectasis__chx,cardiomegaly__chx,consolidation__chx,edema__chx,enlarged_cardiomediastinum__chx,fracture__chx,lung_lesion__chx,lung_opacity__chx,no_finding__chx,pleural_effusion__chx,pleural_other__chx,pneumonia__chx,pneumothorax__chx,support_devices__chx,cxr_exam_indication
@@ -39,6 +81,40 @@ a770d8d6-7b6a62ff-815ab876-c81709a8-9a654a54,files/p11/p11255143/s50941783/a770d
 
 ### 2. fixations.csv (48,959 rows)
 **Description**: Eye fixation data with coordinates, duration, and timing information.
+
+**Column Descriptions**:
+- **SESSION_ID**: Unique identifier for the eye-tracking session
+- **MEDIA_ID**: Identifier for the media being viewed (typically 0)
+- **DICOM_ID**: Unique identifier linking to the DICOM image
+- **CNT**: Counter/index for the data point
+- **Time (in secs)**: Timestamp in seconds from session start
+- **TIMETICK(f=10000000)**: High-resolution timestamp (10MHz frequency)
+- **FPOGX, FPOGY**: Fixation point of gaze coordinates (normalized 0-1)
+- **FPOGS**: Fixation start time in seconds
+- **FPOGD**: Fixation duration in seconds
+- **FPOGID**: Fixation point ID
+- **FPOGV**: Fixation point validity flag (0/1)
+- **BPOGX, BPOGY**: Binocular point of gaze coordinates (normalized 0-1)
+- **BPOGV**: Binocular point validity flag (0/1)
+- **LPCX, LPCY**: Left pupil center coordinates (normalized 0-1)
+- **LPD**: Left pupil diameter in millimeters
+- **LPS**: Left pupil size
+- **LPV**: Left pupil validity flag (0/1)
+- **RPCX, RPCY**: Right pupil center coordinates (normalized 0-1)
+- **RPD**: Right pupil diameter in millimeters
+- **RPS**: Right pupil size
+- **RPV**: Right pupil validity flag (0/1)
+- **BKID**: Blink ID
+- **BKDUR**: Blink duration
+- **BKPMIN**: Blink pupil minimum
+- **LPMM**: Left pupil measurement
+- **LPMMV**: Left pupil measurement validity
+- **RPMM**: Right pupil measurement
+- **RPMMV**: Right pupil measurement validity
+- **SACCADE_MAG**: Saccade magnitude
+- **SACCADE_DIR**: Saccade direction
+- **VID_FRAME**: Video frame number
+- **X_ORIGINAL, Y_ORIGINAL**: Original pixel coordinates
 
 **First 3 rows sample**:
 ```csv
@@ -51,6 +127,15 @@ SESSION_ID,MEDIA_ID,DICOM_ID,CNT,Time (in secs),TIMETICK(f=10000000),FPOGX,FPOGY
 ### 3. bounding_boxes.csv (18,405 rows)
 **Description**: Anatomical region bounding boxes for chest X-ray images.
 
+**Column Descriptions**:
+- **dicom_id**: Unique identifier linking to the DICOM image
+- **bbox_name**: Name of the anatomical region/landmark
+  - Common regions include: cardiac silhouette, left/right clavicle, left/right costophrenic angle, left/right hilar structures, left/right lower/mid/upper lung zone, left/right lung, mediastinum, etc.
+- **x1**: Left boundary coordinate of the bounding box (pixels)
+- **x2**: Right boundary coordinate of the bounding box (pixels)
+- **y1**: Top boundary coordinate of the bounding box (pixels)
+- **y2**: Bottom boundary coordinate of the bounding box (pixels)
+
 **First 3 rows sample**:
 ```csv
 dicom_id,bbox_name,x1,x2,y1,y2
@@ -61,6 +146,42 @@ dicom_id,bbox_name,x1,x2,y1,y2
 
 ### 4. eye_gaze.csv (1,498,953 rows)
 **Description**: Raw eye gaze tracking data (file too large for sample display - 406MB).
+
+**Column Descriptions**:
+- **SESSION_ID**: Unique identifier for the eye-tracking session
+- **MEDIA_ID**: Identifier for the media being viewed (typically 0)
+- **DICOM_ID**: Unique identifier linking to the DICOM image
+- **CNT**: Counter/index for the data point
+- **Time (in secs)**: Timestamp in seconds from session start
+- **TIMETICK(f=10000000)**: High-resolution timestamp (10MHz frequency)
+- **FPOGX, FPOGY**: Fixation point of gaze coordinates (normalized 0-1)
+- **FPOGS**: Fixation start time in seconds
+- **FPOGD**: Fixation duration in seconds
+- **FPOGID**: Fixation point ID
+- **FPOGV**: Fixation point validity flag (0/1)
+- **BPOGX, BPOGY**: Binocular point of gaze coordinates (normalized 0-1)
+- **BPOGV**: Binocular point validity flag (0/1)
+- **LPCX, LPCY**: Left pupil center coordinates (normalized 0-1)
+- **LPD**: Left pupil diameter in millimeters
+- **LPS**: Left pupil size
+- **LPV**: Left pupil validity flag (0/1)
+- **RPCX, RPCY**: Right pupil center coordinates (normalized 0-1)
+- **RPD**: Right pupil diameter in millimeters
+- **RPS**: Right pupil size
+- **RPV**: Right pupil validity flag (0/1)
+- **BKID**: Blink ID
+- **BKDUR**: Blink duration
+- **BKPMIN**: Blink pupil minimum
+- **LPMM**: Left pupil measurement
+- **LPMMV**: Left pupil measurement validity
+- **RPMM**: Right pupil measurement
+- **RPMMV**: Right pupil measurement validity
+- **SACCADE_MAG**: Saccade magnitude
+- **SACCADE_DIR**: Saccade direction
+- **VID_FRAME**: Video frame number
+- **X_ORIGINAL, Y_ORIGINAL**: Original pixel coordinates
+
+**Note**: This file contains the same structure as fixations.csv but includes all eye tracking data points (not just fixations), making it much larger and more comprehensive for detailed gaze analysis.
 
 ## Clinical Diagnostic Labels
 
