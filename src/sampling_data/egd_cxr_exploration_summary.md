@@ -1,7 +1,24 @@
 # EGD-CXR Dataset Exploration Summary
 
+## Abstract
+We created a rich multimodal dataset for the Chest X-Ray (CXR) domain. The data was collected using an eye tracking system while a radiologist interpreted and read 1,083 public CXR images. The dataset contains the following aligned modalities: image, transcribed report text, dictation audio and eye gaze data. We hope this dataset can contribute to various fields of research with applications in machine learning such as deep learning explainability, multi-modal fusion, disease classification, and automated radiology report generation to name a few. The images were selected from the MIMIC-CXR Database and were associated with studies from 1,038 subjects (female: 495, male: 543) who had age range 20 - 80 years old.
+
+## Background
+CXR is the most common imaging modality in the United States. It makes up to 74% of all imaging modalities ordered by physicians. In recent years with the proliferation of deep learning techniques and publicly available CXR datasets, numerous machine learning approaches have been proposed and deployed in radiology settings for disease detection. 
+
+Eye tracking in radiology has been extensively studied for the purposes of education, perception understanding, fatigue measurement. More recently, efforts have shown use of eye gaze data to improve segmentation and disease classification in Computed Tomography (CT) radiography by combining them in deep learning techniques.
+
+Currently, there is a lack of public datasets that capture eye gaze data in CXR space and given their promising utilization in machine learning, we are releasing the first of its kind dataset to the research community to explore and implement novel applications.
+
 ## Dataset Overview
-The EGD-CXR (Eye Gaze Data for Chest X-Ray) dataset is a comprehensive collection of eye-tracking data from radiologists examining chest X-ray images, along with corresponding diagnostic labels and metadata.
+The EGD-CXR (Eye Gaze Data for Chest X-Ray) dataset is a comprehensive collection of eye-tracking data from radiologists examining chest X-ray images, along with corresponding diagnostic labels and metadata. This is the first public dataset of its kind that captures eye gaze data in the CXR domain.
+
+## Methods
+The dataset was collected using an eye tracking system (GP3 HD Eye Tracker, Gazepoint). A radiologist, American Board of Radiology (ABR) certified, with 5 years of attending experience performed interpretation/reading on 1,083 CXR images. The analysis software (Gazepoint Analysis UX Edition) allowed for recording and exporting of eye gaze data and dictation audio.
+
+To identify the images for this study we used MIMIC-CXR Database, which is a large public dataset containing CXR in conjunction with the MIMIC-IV Clinical Database that contains clinical outcomes. Inclusion and exclusion criteria were applied on the Emergency Department clinical notes from MIMIC-IV Clinical Database resulting in a subset of 1,083 cases covering equally 3 prominent clinical conditions (i.e. Normal, Pneumonia and Congestive Heart Failure (CHF)). The corresponding CXR images of these cases were extracted from the MIMIC-CXR database.
+
+The radiologist performed radiology reading on these CXR images using Gazepoint's GP3 Eye Tracker, Gazepoint Analysis UX Edition software, a headset microphone, a PC computer and a monitor (Dell S2719DGF) set at 1920x1080 resolution. Radiology reading took place in multiple sessions (i.e. 30 cases per session) over a period of 2 months (i.e. March - May 2020). The Gazepoint Analysis UX Edition exported raw and processed eye gaze fixations (.csv format) and voice dictation (audio) of radiologist's reading. The audio files were further processed with speech-to-text software (i.e. Google Speech-to-Text API) to extract text transcripts along with dictation word time-related information (.json format). Furthermore, these transcripts were manually corrected. The final dataset contained the eye gaze signal information (.csv), audio files (.wav, .mp3) and transcript files (.json).
 
 ## Dataset Structure
 
@@ -24,10 +41,15 @@ The EGD-CXR (Eye Gaze Data for Chest X-Ray) dataset is a comprehensive collectio
 └── table_descriptions.pdf                  # Detailed table descriptions
 ```
 
-## Tabular Data Files
+## Data Description
+The dataset consists of the following data documents:
 
 ### 1. master_sheet.csv (1,417 rows)
-**Description**: Main metadata file containing patient information, diagnostic labels, and study details.
+**Description**: Master spreadsheet containing DICOM_IDs (i.e. original MIMIC-CXR Database IDs) along with disease labels. This file provides the following key information:
+
+- **DICOM_ID column**: Maps each row to the original MIMIC CXR image as well as the rest of the documents in this dataset
+- **Granular disease labels**: Given by the MIMIC CXR database (i.e. CheXpert NLP tool)
+- **Reason for exam sentences**: Sectioned out from Indication section of the original MIMIC-CXR report
 
 **Column Descriptions**:
 - **dicom_id**: Unique identifier for the DICOM image file
@@ -80,7 +102,15 @@ a770d8d6-7b6a62ff-815ab876-c81709a8-9a654a54,files/p11/p11255143/s50941783/a770d
 ```
 
 ### 2. fixations.csv (48,959 rows)
-**Description**: Eye fixation data with coordinates, duration, and timing information.
+**Description**: Spreadsheet containing fixation eye gaze data as exported by Gazepoint Analysis UX Edition software containing DICOM_IDs. This file is a subset of eye_gaze.csv containing a single data entry per fixation. Fixation is defined as the maintaining of the eye gaze on a single location (i.e. eye gaze cluster). The Gazepoint Analysis UX Edition software generates this file by post-processing (i.e. 'sweeping') the eye_gaze.csv file and storing the last entry for each fixation.
+
+**Key Columns**:
+- **DICOM_ID**: Maps rows to the original MIMIC image name
+- **TIME (in secs)**: Presents the time elapsed in seconds since the last system initialization or calibration (i.e. when a new CXR image was presented to the radiologist)
+- **FPOGX**: The X coordinates of the fixation POG, as a fraction of the screen size. (0, 0) is top left, (0.5, 0.5) is the screen center, and (1.0, 1.0) is bottom right
+- **FPOGY**: The Y coordinates of the fixation POG, as a fraction of the screen size. (0, 0) is top left, (0.5, 0.5) is the screen center, and (1.0, 1.0) is bottom right
+- **X_ORIGINAL**: The X coordinate of the fixation in original MIMIC DICOM image coordinates
+- **Y_ORIGINAL**: The Y coordinate of the fixation in original MIMIC DICOM image coordinates
 
 **Column Descriptions**:
 - **SESSION_ID**: Unique identifier for the eye-tracking session
@@ -125,7 +155,7 @@ SESSION_ID,MEDIA_ID,DICOM_ID,CNT,Time (in secs),TIMETICK(f=10000000),FPOGX,FPOGY
 ```
 
 ### 3. bounding_boxes.csv (18,405 rows)
-**Description**: Anatomical region bounding boxes for chest X-ray images.
+**Description**: Spreadsheet containing bounding boxes coordinates for the anatomical structures containing DICOM_IDs. This file is provided as a supplemental source to help researchers for useful in-depth and correlation analysis (e.g. eye gaze vs. anatomical structures) and/or anatomical structure segmentation purposes.
 
 **Column Descriptions**:
 - **dicom_id**: Unique identifier linking to the DICOM image
@@ -145,7 +175,15 @@ dicom_id,bbox_name,x1,x2,y1,y2
 ```
 
 ### 4. eye_gaze.csv (1,498,953 rows)
-**Description**: Raw eye gaze tracking data (file too large for sample display - 406MB).
+**Description**: Spreadsheet containing raw eye gaze data as exported by Gazepoint Analysis UX Edition software containing DICOM_IDs. This file contains one (1) row for every data sample collected from the eye tracker. Both fixations.csv and eye_gaze.csv spreadsheets contain the same columns, but eye_gaze.csv contains the raw sampled eye gaze signal while fixations.csv contains the post-processed fixation data.
+
+**Key Columns** (same as fixations.csv):
+- **DICOM_ID**: Maps rows to the original MIMIC image name
+- **TIME (in secs)**: Presents the time elapsed in seconds since the last system initialization or calibration
+- **FPOGX**: The X coordinates of the fixation POG, as a fraction of the screen size
+- **FPOGY**: The Y coordinates of the fixation POG, as a fraction of the screen size
+- **X_ORIGINAL**: The X coordinate of the fixation in original MIMIC DICOM image coordinates
+- **Y_ORIGINAL**: The Y coordinate of the fixation in original MIMIC DICOM image coordinates
 
 **Column Descriptions**:
 - **SESSION_ID**: Unique identifier for the eye-tracking session
@@ -182,6 +220,24 @@ dicom_id,bbox_name,x1,x2,y1,y2
 - **X_ORIGINAL, Y_ORIGINAL**: Original pixel coordinates
 
 **Note**: This file contains the same structure as fixations.csv but includes all eye tracking data points (not just fixations), making it much larger and more comprehensive for detailed gaze analysis.
+
+### 5. audio_segmentation_transcripts/ (1,084 subdirectories)
+**Description**: Folder containing subfolders named using DICOM_IDs. Each subfolder contains the following files:
+
+- **audio.wav**: The dictation audio in wav format
+- **audio.mp3**: The dictation audio in mp3 format  
+- **transcript.json**: The transcript of the dictation audio with timestamps for each spoken phrase. Specifically:
+  - `phrase` tag contains phrase text
+  - `begin_time` tag contains the starting time (in seconds) of dictation for phrase
+  - `end_time` tag contains the end time (in seconds) of dictation for phrase
+- **left_lung.png, right_lung.png, mediastinum.png and aortic_knob.png**: The manually segmentation images of four (4) key anatomies: left lung, right lung, mediastinum, aortic knob, respectively
+
+### 6. inclusion_exclusion_criteria_outputs/
+**Description**: Folder containing 3 spreadsheet files that were generated after applying inclusion/exclusion criteria. These 3 spreadsheet files can be used by the sampling script to generate the master_sheet.csv. This is optional and is shared for reproducible purposes.
+
+- **CHF.csv**: Congestive Heart Failure cases
+- **normals.csv**: Normal cases  
+- **pneumonia.csv**: Pneumonia cases
 
 ## Clinical Diagnostic Labels
 
@@ -226,3 +282,50 @@ The dataset also includes numerous other diagnostic labels such as:
 5. **Clinical Labels**: Comprehensive diagnostic classifications for chest X-ray findings
 
 This dataset is particularly valuable for studying radiologist behavior patterns, developing AI-assisted diagnostic tools, and understanding the relationship between visual attention and diagnostic accuracy in chest X-ray interpretation.
+
+## Usage Notes
+
+### Data Access Requirements
+The dataset requires access to the CXR DICOM images found in the MIMIC-CXR database. Users need to obtain access to the MIMIC-CXR database separately to use the actual chest X-ray images.
+
+### Recommended Data Usage
+- **For most experiments**: Use the `fixations.csv` spreadsheet because it contains the eye gaze signal as post-processed by the Gazepoint Analysis UX Edition
+- **For raw signal access**: Use `eye_gaze.csv` if you want access to the raw sampled eye gaze signal
+- **Data linking**: Use the DICOM_ID tag found across all data documents to work with combinations of information from different data sources
+
+### Research Applications
+This dataset can contribute to various fields of research with applications in machine learning such as:
+- **Deep learning explainability**: Understanding how AI models make decisions
+- **Multi-modal fusion**: Combining eye gaze, audio, and image data
+- **Disease classification**: Improving diagnostic accuracy using gaze patterns
+- **Automated radiology report generation**: Using gaze data to improve report quality
+- **Radiology education**: Understanding expert behavior patterns
+- **Clinical decision support**: Analyzing diagnostic patterns
+- **Human-computer interaction**: Improving radiology workstation design
+
+### Data Collection Details
+- **Eye Tracker**: GP3 HD Eye Tracker (Gazepoint)
+- **Monitor**: Dell S2719DGF at 1920x1080 resolution
+- **Radiologist**: ABR certified with 5 years attending experience
+- **Collection Period**: March - May 2020 (2 months)
+- **Session Structure**: 30 cases per session
+- **Audio Processing**: Google Speech-to-Text API with manual correction
+
+### Coordinate Systems
+- **Screen Coordinates**: FPOGX, FPOGY are normalized (0-1) with (0,0) at top-left, (0.5,0.5) at center, (1,1) at bottom-right
+- **DICOM Coordinates**: X_ORIGINAL, Y_ORIGINAL are in original MIMIC DICOM image coordinates
+- **Bounding Boxes**: x1, y1, x2, y2 are in original MIMIC DICOM image coordinates
+
+### Example Usage
+Examples of data usage can be found at: https://github.com/cxr-eye-gaze/eye-gaze-dataset
+
+### Dataset Statistics Summary
+- **Total Images**: 1,083 chest X-ray images
+- **Total Subjects**: 1,038 (Female: 495, Male: 543)
+- **Age Range**: 20-80 years old
+- **Clinical Conditions**: Normal, Pneumonia, Congestive Heart Failure (CHF)
+- **Total Eye Gaze Records**: 1,498,953 data points
+- **Total Fixation Records**: 48,959 fixations
+- **Total Bounding Box Records**: 18,405 anatomical regions
+- **Audio Transcript Directories**: 1,084 sessions
+- **Dataset Size**: ~420MB total
