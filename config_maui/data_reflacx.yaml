@@ -1,0 +1,4 @@
+dataset_name: "reflacx"
+path:
+  raw: /project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/reflacx-xray-localization  
+  sampling_data: /project/hnguyen2/mvu9/processing_datasets/processing_gaze/reflacx
