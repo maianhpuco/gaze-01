@@ -16,3 +16,6 @@ egd-cxr/
     ├── CHF.csv (493 records)
     ├── normals.csv (7MB)
     └── pneumonia.csv 
+
+download mimic dcom in the egd list : 
+    python src/download/download_dicom_with_wget_egd.py 
