@@ -1,0 +1,7 @@
+## Tasks
+
+1. Prune gaze with fixation point
+    - Fixation points: /project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0
+    - Dataset: dcom_raw:  /project/hnguyen2/mvu9/datasets/gaze_data/egd-cxr/dicom_raw
+
+- LSTM: label - Multiple classification
