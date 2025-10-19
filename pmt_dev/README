@@ -5,3 +5,9 @@
     - Dataset: dcom_raw:  /project/hnguyen2/mvu9/datasets/gaze_data/egd-cxr/dicom_raw
 
 - LSTM: label - Multiple classification
+
+Write data set derive from dataset pytorch
+Pruning rule
+
+LSTM -> Recurrent NN -> Sequence of input -> Output (multi classificaiton)
+
