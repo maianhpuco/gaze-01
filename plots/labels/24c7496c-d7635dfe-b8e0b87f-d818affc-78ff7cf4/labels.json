@@ -1,0 +1,27 @@
+{
+  "case_id": "24c7496c-d7635dfe-b8e0b87f-d818affc-78ff7cf4",
+  "final_diagnosis": "Heart failure, unspecified",
+  "diagnoses": [
+    "Heart failure, unspecified"
+  ],
+  "binary_labels": {
+    "Normal": 0,
+    "CHF": 1,
+    "pneumonia": 0,
+    "consolidation": 0,
+    "enlarged_cardiac_silhouette": 1,
+    "linear__patchy_atelectasis": 0,
+    "lobar__segmental_collapse": 0,
+    "not_otherwise_specified_opacity___pleural__parenchymal_opacity__": 0,
+    "pleural_effusion_or_thickening": 0,
+    "pulmonary_edema__hazy_opacity": 1,
+    "normal_anatomically": 0,
+    "elevated_hemidiaphragm": 0,
+    "hyperaeration": 0,
+    "vascular_redistribution": 0,
+    "cardiomegaly__chx": 1,
+    "edema__chx": -1
+  },
+  "cxr_exam_indication": "___F with CHF and  shortness of breath// ?Pulmonary edema",
+  "source_csv": "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/master_sheet.csv"
+}

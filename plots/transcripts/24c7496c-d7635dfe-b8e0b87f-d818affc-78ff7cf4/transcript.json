@@ -1,0 +1,23 @@
+{
+  "text": "Malcoding Megaly generalized haziness of lungs with basal predominance, no large effusion, this likely represents mild edema.",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 8.44,
+      "text": " Malcoding Megaly generalized haziness of lungs with basal predominance, no large"
+    },
+    {
+      "id": 1,
+      "start": 8.44,
+      "end": 14.44,
+      "text": " effusion, this likely represents mild edema."
+    }
+  ],
+  "language": "en",
+  "duration_seconds": null,
+  "audio_path": "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/audio_segmentation_transcripts/24c7496c-d7635dfe-b8e0b87f-d818affc-78ff7cf4/audio.mp3",
+  "model_name": "whisper",
+  "output_text_path": "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/plots/transcripts/24c7496c-d7635dfe-b8e0b87f-d818affc-78ff7cf4/transcript.txt",
+  "output_json_path": "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/plots/transcripts/24c7496c-d7635dfe-b8e0b87f-d818affc-78ff7cf4/transcript.json"
+}
