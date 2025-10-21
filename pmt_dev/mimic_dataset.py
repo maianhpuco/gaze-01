@@ -1,11 +1,12 @@
-from torch.utils.data import Dataset, DataLoader
-import numpy as np
+from dataclasses import asdict, dataclass
 from pathlib import Path
+from torch.utils.data import Dataset
+from typing import Dict, Optional, List
+import json
+import numpy as np
 import pandas as pd
 import pydicom
 import yaml
-import json
-from typing import Dict, Tuple, Optional, List
 
 class Logger:
     
@@ -144,66 +145,195 @@ class FixationPruner:
         else:
             return pd.DataFrame(columns=fixations.columns)
 
+def get_rows_containing_dicom_id(csv_path: Path, dicom_key: str, dicom_id: str) -> pd.DataFrame:
+    """Return rows from a CSV where dicom_key == dicom_id."""
+    if not csv_path.exists():
+        raise FileNotFoundError(f"CSV not found at {csv_path}")
+    df = pd.read_csv(csv_path)
+    if dicom_key not in df.columns:
+        raise KeyError(f"Column '{dicom_key}' not found in {csv_path}")
+    return df[df[dicom_key] == dicom_id].copy()
+
+def get_row_by_dicom_id(csv_path: Path, dicom_key: str, dicom_id: str) -> pd.Series:
+    """Return a single row from a CSV where dicom_key == dicom_id."""
+    if not csv_path.exists():
+        raise FileNotFoundError(f"CSV not found at {csv_path}")
+    df = pd.read_csv(csv_path)
+    if dicom_key not in df.columns:
+        raise KeyError(f"Column '{dicom_key}' not found in {csv_path}")
+    row = df[df[dicom_key] == dicom_id]
+    if row.empty:
+        raise ValueError(f"No entry found for DICOM ID: {dicom_id} in {csv_path}")
+    return row.iloc[0]
+
+@dataclass
+class InputFeature:
+    dicom_id: str
+    dicom_image: np.ndarray
+    fixations: pd.DataFrame
+    bounding_boxes: pd.DataFrame
+
+    @classmethod
+    def from_csv_files(
+        cls,
+        dicom_id: str,
+        dicom_path: Path,
+        fixations_csv: Path,
+        bounding_boxes_csv: Path,
+        pruner: Optional[FixationPruner] = None
+    ) -> "InputFeature":
+        """Factory constructor that initializes InputFeature from file paths."""
+        dicom_image = DICOMImageLoader.load(dicom_path / f"{dicom_id}.dcm")
+        fixation_dicom_id = "DICOM_ID"
+        bounding_box_dicom_id = "dicom_id"
+        fixations = get_rows_containing_dicom_id(fixations_csv, fixation_dicom_id, dicom_id)
+        bounding_boxes = get_rows_containing_dicom_id(bounding_boxes_csv, bounding_box_dicom_id, dicom_id)
+
+        if pruner is not None:
+            fixations = pruner.prune(fixations, bounding_boxes)
+
+        return cls(
+            dicom_id=dicom_id,
+            dicom_image=dicom_image,
+            fixations=fixations,
+            bounding_boxes=bounding_boxes
+        )
+
+@dataclass
+class Label:
+    dicom_id: str
+    final_diagnosis: Optional[str]
+    diagnoses: List[str]
+    binary_labels: Dict[str, int]
+    cxr_exam_indication: Optional[str]
+
+    @classmethod
+    def from_master_sheet(cls, dicom_id: str, master_sheet_csv: Path) -> "Label":
+        """Factory constructor that creates a Label from the master sheet."""
+        master_sheet_dicom_id = "dicom_id"
+        row = get_row_by_dicom_id(master_sheet_csv, master_sheet_dicom_id, dicom_id)
+        if row.empty:
+            raise ValueError(f"No entry found for DICOM ID: {dicom_id}")
+        diagnoses = cls.extract_diagnoses(row)
+        return cls(
+            dicom_id=dicom_id,
+            diagnoses=diagnoses,
+            final_diagnosis=diagnoses[0] if diagnoses else None,
+            binary_labels=cls.extract_binary_labels(row),
+            cxr_exam_indication=cls.extract_cxr_exam_indication(row),
+        )
+
+    @classmethod
+    def from_master_sheet_dataframe(cls, dicom_id: str, master_sheet_df: pd.DataFrame) -> "Label":
+        """Factory constructor that creates a Label from a DataFrame."""
+        row = master_sheet_df[master_sheet_df["dicom_id"] == dicom_id]
+        if row.empty:
+            raise ValueError(f"No entry found for DICOM ID: {dicom_id}")
+        row_series = row.iloc[0]
+        diagnoses = cls.extract_diagnoses(row_series)
+        return cls(
+            dicom_id=dicom_id,
+            diagnoses=diagnoses,
+            final_diagnosis=diagnoses[0] if diagnoses else None,
+            binary_labels=cls.extract_binary_labels(row_series),
+            cxr_exam_indication=cls.extract_cxr_exam_indication(row_series),
+        )
+
+    # --- Static helper methods ---
+    @staticmethod
+    def extract_cxr_exam_indication(case_row: pd.Series) -> Optional[str]:
+        return case_row["cxr_exam_indication"] if not case_row.empty else None
+
+    @staticmethod
+    def extract_diagnoses(case_row: pd.Series) -> List[str]:
+        dx_columns = [col for col in case_row.index if col.startswith("dx") and "_icd" not in col]
+        diagnoses: List[str] = []
+        for col in sorted(dx_columns, key=lambda name: int(name[2:]) if name[2:].isdigit() else 0):
+            value = case_row[col]
+            if isinstance(value, str) and value.strip():
+                diagnoses.append(value.strip())
+        return diagnoses
+
+    @staticmethod
+    def extract_binary_labels(case_row: pd.Series) -> Dict[str, int]:
+        columns = list(case_row.index)
+        if "Normal" not in columns or "support_devices__chx" not in columns:
+            return {}
+        start_idx = columns.index("Normal")
+        end_idx = columns.index("support_devices__chx")
+        binary_section = columns[start_idx : end_idx + 1]
+
+        labels: Dict[str, int] = {}
+        for col in binary_section:
+            value = case_row[col]
+            if pd.isna(value):
+                continue
+            try:
+                numeric = int(value)
+            except (TypeError, ValueError):
+                continue
+            labels[col] = numeric
+        return labels
+
 class MimicDataset(Dataset):
     def __init__(self, config_path: str, pruner: Optional[FixationPruner] = None):
         config_loader = ConfigLoader(config_path)
-        gaze_path = Path(config_loader.get('input_path', 'gaze_raw'))
 
+        # Image DICOM path
         self.dicom_path = Path(config_loader.get('input_path', 'dicom_raw'))
-        self.master_sheet = pd.read_csv(gaze_path / 'master_sheet.csv')
-        self.bounding_boxes = pd.read_csv(gaze_path / 'bounding_boxes.csv')
-        self.fixations = pd.read_csv(gaze_path / 'fixations.csv')
+
+        # Load CSV files
+        gaze_path = Path(config_loader.get('input_path', 'gaze_raw'))
+        self.master_sheet_csv = gaze_path / 'master_sheet.csv'
+        self.bounding_boxes_csv = gaze_path / 'bounding_boxes.csv'
+        self.fixations_csv = gaze_path / 'fixations.csv'
+
+        # Cache master_sheet to avoid re-reading on every item
+        if not self.master_sheet_csv.exists():
+            raise FileNotFoundError(f"master_sheet.csv not found at {self.master_sheet_csv}")
+        self.master_sheet_df = pd.read_csv(self.master_sheet_csv)
+
+        # Optional pruner
         self.pruner = pruner
 
     def __len__(self):
-        return len(self.master_sheet)
+        return len(self.master_sheet_df)
 
     def __getitem__(self, idx) -> Dict:
-        record = self.master_sheet.iloc[idx]
+        # Bounds check
+        if idx < 0 or idx >= len(self.master_sheet_df):
+            raise IndexError(f"Index {idx} out of range for dataset of size {len(self.master_sheet_df)}")
+        record = self.master_sheet_df.iloc[idx]
         dicom_id = record['dicom_id']
-        dicom_image = DICOMImageLoader.load(self.dicom_path / f"{dicom_id}.dcm")
-        fix_id_col = 'DICOM_ID' if 'DICOM_ID' in self.fixations.columns else ('dicom_id' if 'dicom_id' in self.fixations.columns else None)
-        box_id_col = 'dicom_id' if 'dicom_id' in self.bounding_boxes.columns else ('DICOM_ID' if 'DICOM_ID' in self.bounding_boxes.columns else None)
-        if fix_id_col is None:
-            raise KeyError("Neither 'DICOM_ID' nor 'dicom_id' found in fixations.csv")
-        if box_id_col is None:
-            raise KeyError("Neither 'dicom_id' nor 'DICOM_ID' found in bounding_boxes.csv")
+        Logger.info(f"Fetching data for DICOM ID: {dicom_id}")
 
-        fixations = self.fixations[self.fixations[fix_id_col] == dicom_id].copy()
-        bounding_boxes = self.bounding_boxes[self.bounding_boxes[box_id_col] == dicom_id].copy()
+        # Load input features
+        input_feature = InputFeature.from_csv_files(
+            dicom_id=dicom_id,
+            dicom_path=self.dicom_path,
+            fixations_csv=self.fixations_csv,
+            bounding_boxes_csv=self.bounding_boxes_csv,
+            pruner=self.pruner
+        )
 
-        if self.pruner:
-            fixations = self.pruner.prune(fixations, bounding_boxes)
-
-        # Return a single sample dict (not nested by idx) for PyTorch collation
+        # Load labels
+        label = Label.from_master_sheet_dataframe(
+            dicom_id=dicom_id,
+            master_sheet_df=self.master_sheet_df
+        )
         return {
-            'dicom_id': dicom_id,
-            'image': dicom_image,
-            'fixations': fixations,
-            'bounding_boxes': bounding_boxes
+            "input_feature": input_feature,
+            "label": label
         }
 
-
-def collate_batch(batch: List[Dict]) -> Dict:
-    """Custom collate function to handle pandas DataFrames and variable-size images.
-    - Keeps 'fixations' and 'bounding_boxes' as lists of DataFrames
-    - Keeps 'image' as a list to avoid stacking failures for varying HxW
-    - Aggregates 'dicom_id' as a list of strings
-    """
-    return {
-        'dicom_id': [sample['dicom_id'] for sample in batch],
-        'image': [sample['image'] for sample in batch],
-        'fixations': [sample['fixations'] for sample in batch],
-        'bounding_boxes': [sample['bounding_boxes'] for sample in batch],
-    }
-
 if __name__ == "__main__":
-    base_dir = Path(__file__).parent.resolve()
-    config_path = base_dir / 'config/data_egd-cxr.yaml'
-    pruner = FixationPruner()
-    dataset = MimicDataset(config_path, pruner=pruner)
-    dataloader = DataLoader(dataset, batch_size=2, shuffle=True, collate_fn=collate_batch)
-
-    for batch in dataloader:
-        Logger.info(f"Batch DICOM IDs: {batch['dicom_id']}")
-        Logger.info(f"Batch Image Shapes: {[img.shape for img in batch['image']]}")
+    # Example usage: print input and label as JSON
+    try:
+        dataset = MimicDataset(config_path='config/data_egd-cxr.yaml', pruner=FixationPruner())
+        sample = dataset.__getitem__(1)
+        Logger.info(f"Sample keys: {list(sample.keys())}")
+        label_json = asdict(sample["label"])
+        input_feature_json = asdict(sample["input_feature"])
+        Logger.info(json.dumps(label_json, indent=2))
+    except Exception as e:
+        Logger.error(f"Error fetching/printing data: {e}")
