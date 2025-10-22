@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
-Smoke-test script for the EGDCXRDataset and DataLoader.
+Dump EGD-CXR dataset samples to JSON for quick sanity checking.
 
 Example:
-    python main_testdata.py --split train --batch-size 2 --num-batches 1
+    python sanity_check_dataset.py --config-path config/data_egd-cxr.yaml \
+        --split train --batch-size 1 --num-batches 1 --max-fixations 5 \
+        --output-dir sanity_check/dataset --show-json --print-raw
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import torch
 from pathlib import Path
 from typing import Dict, List
+
+import torch
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
@@ -26,7 +29,7 @@ DEFAULT_CONFIG = ROOT / "config" / "data_egd-cxr.yaml"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Test EGDCXRDataset train/val/test splits.")
+    parser = argparse.ArgumentParser(description="Emit dataset samples as JSON for sanity checking.")
     parser.add_argument(
         "--config-path",
         type=Path,
@@ -75,12 +78,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--show-json",
         action="store_true",
-        help="Emit batch summary as JSON.",
+        help="Emit batch summary as JSON to stdout.",
     )
     parser.add_argument(
         "--print-raw",
         action="store_true",
-        help="Print the raw batch payload returned by the DataLoader (can be large).",
+        help="Print a small raw sample (first case) to stdout.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=ROOT / "sanity_check" / "dataset",
+        help="Directory to store per-case JSON dumps (default: sanity_check/dataset).",
     )
     return parser.parse_args()
 
@@ -92,34 +101,93 @@ def read_split_ids(split_file: Path, limit: int | None = None) -> List[str]:
     return ids
 
 
+def case_payload(batch: Dict, idx: int) -> Dict:
+    fix = batch["fixations"]
+    length = int(fix["lengths"][idx].item())
+    xy = fix["xy"][idx, :length]
+    dwell = fix["dwell"][idx, :length]
+    time_s = fix["time"][idx, :length]
+    seg_hits = fix["seg_hits"][idx, :length]
+    box_hits = fix["box_hits"][idx, :length]
+    image = batch["images"][idx]
+    head = min(length, 5)
+
+    payload = {
+        "dicom_id": batch["dicom_ids"][idx],
+        "length": length,
+        "fixations": {
+            "xy_head": xy[:head].tolist(),
+            "dwell_head": dwell[:head].tolist(),
+            "time_head": time_s[:head].tolist(),
+            "seg_hits_head": seg_hits[:head].tolist(),
+            "box_hits_head": box_hits[:head].tolist(),
+        },
+        "image": {
+            "shape": list(image.shape),
+            "min": float(image.min().item()),
+            "max": float(image.max().item()),
+            "mean": float(image.mean().item()),
+        },
+        "labels": {
+            "binary": batch["labels"]["binary"][idx].tolist(),
+            "binary_names": batch["labels"]["binary_names"],
+            "final_diagnosis": batch["labels"]["final_diagnosis"][idx],
+            "diagnoses": batch["labels"]["diagnoses"][idx],
+        },
+        "transcript": batch["transcripts"][idx],
+        "meta": batch["meta"],
+    }
+    return payload
+
+
 def serialisable_batch_summary(batch: Dict) -> Dict:
     fix = batch["fixations"]
-    first_idx = 0
-    transcript_entry = batch["transcripts"][first_idx] if batch["transcripts"] else {}
-    transcript_text = ""
-    transcript_segments = []
-    if isinstance(transcript_entry, dict):
-        transcript_text = transcript_entry.get("text", "")
-        segments = transcript_entry.get("segments", [])
-        transcript_segments = segments[: min(3, len(segments))]
+    lengths = fix["lengths"]
     return {
         "batch_size": int(fix["xy"].shape[0]),
-        "seq_len": int(fix["xy"].shape[1]),
+        "seq_len_max": int(fix["xy"].shape[1]),
+        "lengths": lengths.tolist(),
         "xy_shape": list(fix["xy"].shape),
-        "time_shape": list(fix["time"].shape),
-        "dwell_shape": list(fix["dwell"].shape),
         "seg_hits_shape": list(fix["seg_hits"].shape),
         "box_hits_shape": list(fix["box_hits"].shape),
         "images_shape": list(batch["images"].shape),
         "labels_binary_shape": list(batch["labels"]["binary"].shape),
-        "transcripts_segments": [len((t or {}).get("segments", [])) for t in batch["transcripts"]],
-        "lengths": fix["lengths"].tolist(),
         "dicom_ids": batch["dicom_ids"],
-        "transcript_sample": {
-            "text": transcript_text,
-            "segments_head": transcript_segments,
-        },
     }
+
+
+def maybe_print_raw(batch: Dict) -> None:
+    fix = batch["fixations"]
+    lengths = fix["lengths"]
+    if lengths.numel() == 0:
+        return
+    idx = 0
+    length = int(lengths[idx].item())
+    head = min(length, 5)
+    payload = {
+        "dicom_id": batch["dicom_ids"][idx],
+        "length": length,
+        "xy_head": fix["xy"][idx, :head].tolist(),
+        "dwell_head": fix["dwell"][idx, :head].tolist(),
+        "time_head": fix["time"][idx, :head].tolist(),
+        "seg_hits_head": fix["seg_hits"][idx, :head].tolist(),
+        "box_hits_head": fix["box_hits"][idx, :head].tolist(),
+        "transcript": batch["transcripts"][idx],
+    }
+    print(json.dumps({"raw_sample": payload}, indent=2))
+
+
+def ensure_dir(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def dump_cases(batch: Dict, output_dir: Path) -> None:
+    ensure_dir(output_dir)
+    for idx, dicom_id in enumerate(batch["dicom_ids"]):
+        payload = case_payload(batch, idx)
+        path = output_dir / f"{dicom_id}.json"
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        print(f"Wrote {path}")
 
 
 def main() -> None:
@@ -131,9 +199,7 @@ def main() -> None:
     transcripts_dir = Path(config_loader.get("input_path", "transcripts_dir", default=seg_dir))
     dicom_root = Path(config_loader.get("input_path", "dicom_raw"))
 
-    split_dir = Path(
-        config_loader.get("split_files", "dir", default=ROOT / "config" / "splits")
-    )
+    split_dir = Path(config_loader.get("split_files", "dir", default=ROOT / "config" / "splits"))
     if not split_dir.is_absolute():
         split_dir = ROOT / split_dir
     split_file = split_dir / f"{args.split}_ids.txt"
@@ -164,38 +230,27 @@ def main() -> None:
         f"batch_size={args.batch_size} | shuffle={shuffle}"
     )
 
+    ensure_dir(args.output_dir)
+
     for batch_idx, batch in enumerate(dataloader):
         if batch_idx >= args.num_batches:
             break
         summary = serialisable_batch_summary(batch)
         if args.print_raw:
-            fix = batch["fixations"]
-            lengths = fix["lengths"].tolist()
-            sample_len = lengths[0] if lengths else 0
-            head = min(sample_len, 5)
-            raw_payload = {
-                "dicom_id": batch["dicom_ids"][0] if batch["dicom_ids"] else None,
-                "length": sample_len,
-                "xy_head": fix["xy"][0, :head].tolist() if head else [],
-                "dwell_head": fix["dwell"][0, :head].tolist() if head else [],
-                "time_head": fix["time"][0, :head].tolist() if head else [],
-                "seg_hits_head": fix["seg_hits"][0, :head].tolist() if head else [],
-                "box_hits_head": fix["box_hits"][0, :head].tolist() if head else [],
-                "transcript": batch["transcripts"][0] if batch["transcripts"] else {},
-            }
-            print(json.dumps({"batch_idx": batch_idx, "raw_sample": raw_payload}, indent=2))
+            maybe_print_raw(batch)
         if args.show_json:
             print(json.dumps({"batch_idx": batch_idx, **summary}, indent=2))
         else:
             print(
-                f"[batch {batch_idx}] "
-                f"ids={summary['dicom_ids']} "
-                f"xy={summary['xy_shape']} seg_hits={summary['seg_hits_shape']} "
-                f"box_hits={summary['box_hits_shape']} labels={summary['labels_binary_shape']}"
+                f"[batch {batch_idx}] ids={summary['dicom_ids']} "
+                f"xy_shape={summary['xy_shape']} seg_hits_shape={summary['seg_hits_shape']} "
+                f"box_hits_shape={summary['box_hits_shape']} labels_shape={summary['labels_binary_shape']}"
             )
+        dump_cases(batch, args.output_dir)
 
     print("Done.")
 
 
 if __name__ == "__main__":
     main()
+

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -13,8 +14,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import AdamW
-
-import sys
+from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
@@ -22,7 +22,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from egd_cxr_dataset import ConfigLoader, EGDCXRDataset, build_vocab, create_dataloader
-from egd_cxr_dataset.models import GazeIntent2TranscriptAndLabels
+from egd_cxr_dataset.models.gaze_intent import GazeIntent2TranscriptAndLabels
 
 
 def set_seed(seed: int = 0) -> None:
@@ -61,6 +61,7 @@ def run_epoch(
     device: torch.device,
     vocab,
     optimiser: Optional[AdamW],
+    desc: str = "",
 ) -> Tuple[float, torch.Tensor, int]:
     train_mode = optimiser is not None
     if train_mode:
@@ -73,7 +74,8 @@ def run_epoch(
     all_preds: List[torch.Tensor] = []
     all_targets: List[torch.Tensor] = []
 
-    for batch in loader:
+    progress = tqdm(loader, desc=desc or "epoch", leave=False)
+    for batch in progress:
         fix = batch["fixations"]
         labels_batch = batch["labels"]["binary"].to(device)
         images = batch["images"].to(device)
@@ -268,30 +270,6 @@ def main() -> None:
         shuffle=False,
         num_workers=args.num_workers,
     )
-    print(">>>>>>>>>>>>>> print sample here")
-    sample = train_dataset[0]  # or train_dataset[0], val_dataset[0], etc.
-    print("sample keys:", list(sample.keys()))
-    for k, v in sample.items():
-        try:
-            print(k, type(v), getattr(v, "shape", None))
-        except Exception:
-            print(k, type(v)) 
-    print("<<<<<<<<<<<<<< print sample here")
-    print("================================================") 
-    batch = next(iter(train_loader))  # or train_loader/val_loader
-    print("batch keys:", list(batch.keys()))
-
-    # Inspect the first item in the batch
-    idx = 0
-    first_item = {k: (v[idx] if hasattr(v, "__getitem__") else v) for k, v in batch.items()}
-    print("first item keys:", list(first_item.keys()))
-    for k, v in first_item.items():
-        try:
-            print(k, type(v), getattr(v, "shape", None))
-        except Exception:
-            print(k, type(v)) 
-    print("================================================") 
-
     model, vocab = build_model_and_vocab(
         train_dataset,
         device,
@@ -310,6 +288,7 @@ def main() -> None:
             device=device,
             vocab=vocab,
             optimiser=optimiser,
+            desc=f"train {epoch:02d}",
         )
         val_loss, val_acc, _ = run_epoch(
             model,
@@ -317,6 +296,7 @@ def main() -> None:
             device=device,
             vocab=vocab,
             optimiser=None,
+            desc=f"val {epoch:02d}",
         )
         print(f"Epoch {epoch:02d} | train loss {train_loss:.4f} | val loss {val_loss:.4f}")
         print("  Train accuracy per class:")
@@ -330,6 +310,7 @@ def main() -> None:
         device=device,
         vocab=vocab,
         optimiser=None,
+        desc="test",
     )
     print(f"Test loss {test_loss:.4f} over {batches} batches")
     print("Test accuracy per class:")

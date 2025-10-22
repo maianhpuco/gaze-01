@@ -1,0 +1,390 @@
+{
+  "dicom_id": "7776608e-d61a4a9d-0057e276-162d2e97-6a9ca42b",
+  "length": 5,
+  "fixations": {
+    "xy_head": [
+      [
+        1326.784912109375,
+        173.6767578125
+      ],
+      [
+        1406.5587158203125,
+        1108.9039306640625
+      ],
+      [
+        1398.0396728515625,
+        1285.5439453125
+      ],
+      [
+        1224.9376220703125,
+        1435.880615234375
+      ],
+      [
+        1257.157470703125,
+        1497.2861328125
+      ]
+    ],
+    "dwell_head": [
+      333.4900207519531,
+      83.5,
+      87.39999389648438,
+      161.62001037597656,
+      161.62001037597656
+    ],
+    "time_head": [
+      0.3334999978542328,
+      0.6630899906158447,
+      0.7602499723434448,
+      0.9316400289535522,
+      1.0942399501800537
+    ],
+    "seg_hits_head": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ]
+    ],
+    "box_hits_head": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ]
+    ]
+  },
+  "image": {
+    "shape": [
+      1,
+      224,
+      224
+    ],
+    "min": 0.0,
+    "max": 0.999755859375,
+    "mean": 0.5781785249710083
+  },
+  "labels": {
+    "binary": [
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    "binary_names": [
+      "Normal",
+      "CHF",
+      "pneumonia",
+      "consolidation",
+      "enlarged_cardiac_silhouette",
+      "linear__patchy_atelectasis",
+      "lobar__segmental_collapse",
+      "not_otherwise_specified_opacity___pleural__parenchymal_opacity__",
+      "pleural_effusion_or_thickening",
+      "pulmonary_edema__hazy_opacity",
+      "normal_anatomically",
+      "elevated_hemidiaphragm",
+      "hyperaeration",
+      "vascular_redistribution",
+      "atelectasis__chx",
+      "cardiomegaly__chx",
+      "consolidation__chx",
+      "edema__chx",
+      "enlarged_cardiomediastinum__chx",
+      "fracture__chx",
+      "lung_lesion__chx",
+      "lung_opacity__chx",
+      "no_finding__chx",
+      "pleural_effusion__chx",
+      "pleural_other__chx",
+      "pneumonia__chx",
+      "pneumothorax__chx",
+      "support_devices__chx"
+    ],
+    "final_diagnosis": "Pneumonia, unspecified organism",
+    "diagnoses": [
+      "Pneumonia, unspecified organism",
+      "Essential (primary) hypertension"
+    ]
+  },
+  "transcript": {
+    "text": "normal heart and mediastinum. minimal linear opacity at the left lung base probably represents atelectasis or scarring. no large effusion. no pneumothorax.",
+    "segments": [
+      {
+        "begin": 1.3,
+        "end": 1.9,
+        "text": "normal"
+      },
+      {
+        "begin": 1.9,
+        "end": 2.2,
+        "text": "heart"
+      },
+      {
+        "begin": 2.2,
+        "end": 2.4,
+        "text": "and"
+      },
+      {
+        "begin": 2.4,
+        "end": 2.5,
+        "text": "mediastinum."
+      },
+      {
+        "begin": 4.5,
+        "end": 5.3,
+        "text": "minimal"
+      },
+      {
+        "begin": 7.7,
+        "end": 8.3,
+        "text": "linear"
+      },
+      {
+        "begin": 8.3,
+        "end": 8.8,
+        "text": "opacity"
+      },
+      {
+        "begin": 8.8,
+        "end": 8.9,
+        "text": "at"
+      },
+      {
+        "begin": 8.9,
+        "end": 9.0,
+        "text": "the"
+      },
+      {
+        "begin": 9.0,
+        "end": 9.2,
+        "text": "left"
+      },
+      {
+        "begin": 9.2,
+        "end": 9.4,
+        "text": "lung"
+      },
+      {
+        "begin": 9.4,
+        "end": 9.5,
+        "text": "base"
+      },
+      {
+        "begin": 9.5,
+        "end": 10.6,
+        "text": "probably"
+      },
+      {
+        "begin": 10.6,
+        "end": 11.1,
+        "text": "represents"
+      },
+      {
+        "begin": 11.1,
+        "end": 11.5,
+        "text": "atelectasis"
+      },
+      {
+        "begin": 11.5,
+        "end": 11.9,
+        "text": "or"
+      },
+      {
+        "begin": 11.9,
+        "end": 12.1,
+        "text": "scarring."
+      },
+      {
+        "begin": 12.1,
+        "end": 13.6,
+        "text": "no"
+      },
+      {
+        "begin": 13.6,
+        "end": 13.8,
+        "text": "large"
+      },
+      {
+        "begin": 13.8,
+        "end": 14.2,
+        "text": "effusion."
+      },
+      {
+        "begin": 15.7,
+        "end": 16.1,
+        "text": "no"
+      },
+      {
+        "begin": 16.1,
+        "end": 16.4,
+        "text": "pneumothorax."
+      }
+    ]
+  },
+  "meta": {
+    "segment_names": [
+      "aortic_knob",
+      "left_lung",
+      "mediastanum",
+      "right_lung"
+    ],
+    "box_class_names": [
+      "cardiac silhouette",
+      "left clavicle",
+      "left costophrenic angle",
+      "left hilar structures",
+      "left lower lung zone",
+      "left lung",
+      "left mid lung zone",
+      "left upper lung zone",
+      "right clavicle",
+      "right costophrenic angle",
+      "right hilar structures",
+      "right lower lung zone",
+      "right lung",
+      "right mid lung zone",
+      "right upper lung zone",
+      "trachea",
+      "upper mediastinum"
+    ]
+  }
+}

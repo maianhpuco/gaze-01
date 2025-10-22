@@ -229,13 +229,14 @@ class GazeIntent2TranscriptAndLabels(nn.Module):
         for t0, t1 in windows:
             mask = slice_fixation_mask(time_s, t0, t1)
             if mask.sum() == 0:
-                empty_intent = torch.cat(
-                    [
-                        torch.zeros(self.intent_builder.C, device=device),
-                        torch.zeros(self.intent_builder.S, device=device),
-                        image_feat,
-                    ]
-                )
+                # Create empty intent with same structure as forward_window
+                z_box = torch.zeros(self.intent_builder.C, device=device)
+                z_seg = torch.zeros(self.intent_builder.S, device=device)
+                fused = torch.cat([z_box, z_seg, image_feat], dim=0)
+                if self.intent_builder.mlp is None:
+                    empty_intent = fused
+                else:
+                    empty_intent = self.intent_builder.mlp(fused.unsqueeze(0)).squeeze(0)
                 intents.append(empty_intent)
                 continue
             intent = self.intent_builder.forward_window(

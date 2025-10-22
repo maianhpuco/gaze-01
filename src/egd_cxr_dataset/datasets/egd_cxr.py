@@ -592,22 +592,49 @@ class EGDCXRDataset(Dataset):
         return {"text": "", "segments": []}
 
     def _load_fixations(self, dicom_id: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Load and process eye tracking fixation data for a case.
+        
+        Filters and validates fixation data, ensuring coordinates are within bounds
+        and durations are positive. Sorts by timestamp and optionally limits the
+        number of fixations.
+        
+        Args:
+            dicom_id: Case identifier
+            
+        Returns:
+            Tuple of (times, xy_norm, dwell):
+            - times: Timestamps in seconds (T,)
+            - xy_norm: Normalized coordinates [0,1] (T, 2)
+            - dwell: Fixation durations in milliseconds (T,)
+            
+        Raises:
+            ValueError: If no valid fixations are found
+        """
         df = self.fx_df[self.fx_df["DICOM_ID"] == dicom_id].copy()
         if df.empty:
             raise ValueError(f"No fixations for {dicom_id}")
+        
+        # Filter valid fixations (coordinates in bounds, positive duration)
         df = df[
-            df[X_COLUMN].between(0.0, 1.0)
-            & df[Y_COLUMN].between(0.0, 1.0)
-            & df[DURATION_COLUMN].notna()
-            & (df[DURATION_COLUMN] > 0)
+            df[X_COLUMN].between(0.0, 1.0)      # X coordinate in [0,1]
+            & df[Y_COLUMN].between(0.0, 1.0)    # Y coordinate in [0,1]
+            & df[DURATION_COLUMN].notna()       # Duration not null
+            & (df[DURATION_COLUMN] > 0)         # Duration positive
         ].copy()
         if df.empty:
             raise ValueError(f"Invalid fixations for {dicom_id}")
+        
+        # Sort by timestamp and counter for consistent ordering
         df.sort_values(by=[TIME_COLUMN, "CNT"], inplace=True, kind="mergesort")
+        
+        # Limit number of fixations if specified
         if self.max_fix is not None:
             df = df.iloc[: self.max_fix]
+        
+        # Extract arrays
         xy_norm = df[[X_COLUMN, Y_COLUMN]].to_numpy(dtype=np.float32)
-        dwell = df[DURATION_COLUMN].to_numpy(dtype=np.float32) * 1000.0
+        dwell = df[DURATION_COLUMN].to_numpy(dtype=np.float32) * 1000.0  # Convert to ms
         times = df[TIME_COLUMN].to_numpy(dtype=np.float32)
         return times, xy_norm, dwell
 
