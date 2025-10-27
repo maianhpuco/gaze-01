@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/st4/main_train_st4_image_bbox_seg_text.py", line 8, in <module>
+    from main_train_st4 import main as base_main
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/st4/main_train_st4.py", line 23, in <module>
+    from egd_cxr_dataset.datasets.egd_cxr import collate_fn
+ModuleNotFoundError: No module named 'egd_cxr_dataset'
