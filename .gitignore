@@ -16,6 +16,6 @@ dist/
 
 
 # checkpoints/
-# *.ckpt
-# *.pth
-# *.pt
+*.ckpt
+*.pth
+*.pt
