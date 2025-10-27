@@ -50,6 +50,7 @@ TIME_COLUMN = "Time (in secs)"      # Timestamp of fixation
 X_COLUMN = "FPOGX"                  # Normalized X coordinate (0-1)
 Y_COLUMN = "FPOGY"                  # Normalized Y coordinate (0-1)
 DURATION_COLUMN = "FPOGD"           # Fixation duration in seconds
+DEFAULT_IMAGE_SIZE = (224, 224)     # Target resolution for images & masks
 
 
 class Logger:
@@ -80,6 +81,35 @@ class LabelSchema:
         class_columns: List of column names that contain binary (0/1) disease labels
     """
     class_columns: List[str]
+
+
+@dataclass(frozen=True)
+class ClassificationLabel:
+    """
+    Encapsulates a single categorical label derived from mutually exclusive classes.
+
+    Attributes:
+        index: Integer index of the resolved class (-1 if unknown)
+        name: Human-readable class name (or "Unknown" when unresolved)
+        classes: Tuple of supported class names in deterministic order
+        per_class: Mapping of each class name to its raw binary flag
+        positives: Tuple of class names that were positive in the source data
+        ambiguous: Flag indicating whether multiple classes were simultaneously positive
+    """
+
+    index: int
+    name: str
+    classes: Tuple[str, ...]
+    per_class: Dict[str, int]
+    positives: Tuple[str, ...]
+    ambiguous: bool
+
+    def one_hot(self) -> torch.Tensor:
+        """Return a one-hot tensor aligned with the `classes` ordering."""
+        vec = torch.zeros(len(self.classes), dtype=torch.float32)
+        if 0 <= self.index < len(self.classes):
+            vec[self.index] = 1.0
+        return vec
 
 
 class LabelProcessor:
@@ -239,6 +269,61 @@ class LabelProcessor:
         # Create tensor and return with metadata
         tensor = torch.tensor(values, dtype=torch.float32)
         return tensor, self.schema.class_columns, row.to_dict()
+
+    def classification_label(
+        self,
+        case_id: str,
+        *,
+        classes: Sequence[str] = ("CHF", "pneumonia", "Normal"),
+        priority: Optional[Sequence[str]] = None,
+    ) -> ClassificationLabel:
+        """
+        Derive a mutually exclusive class label following notebook filtering logic.
+
+        Args:
+            case_id: DICOM identifier
+            classes: Ordered sequence of class names to inspect in the source CSV
+            priority: Optional override for resolving clashes when multiple classes are positive
+
+        Returns:
+            ClassificationLabel describing the resolved label assignment.
+            When no classes are positive the index will be -1 and name "Unknown".
+        """
+        row = self._get_row(case_id)
+        class_order = tuple(priority) if priority is not None else tuple(classes)
+        per_class: Dict[str, int] = {}
+        positives: List[str] = []
+
+        for cls in class_order:
+            raw = row.get(cls, np.nan)
+            if pd.isna(raw):
+                value = 0
+            else:
+                try:
+                    value = int(raw)
+                except (TypeError, ValueError):
+                    value = 1 if str(raw).strip() not in ("", "0", "nan", "None") else 0
+            value = 1 if value == 1 else 0
+            per_class[cls] = value
+            if value == 1:
+                positives.append(cls)
+
+        label_index = -1
+        label_name = "Unknown"
+        for cls in class_order:
+            if per_class.get(cls, 0) == 1:
+                label_index = class_order.index(cls)
+                label_name = cls
+                break
+
+        return ClassificationLabel(
+            index=label_index,
+            name=label_name,
+            classes=class_order,
+            per_class=per_class,
+            positives=tuple(positives),
+            ambiguous=len(positives) > 1,
+        )
 
 
 @dataclass(frozen=True)
@@ -677,28 +762,44 @@ class EGDCXRDataset(Dataset):
                 self.num_segments = seg_masks_np.shape[0]
             if not self.region_names:
                 self.region_names = [f"segment_{i}" for i in range(self.num_segments)]
-        
-        # Extract anatomical segments (exclude background)
+
+        # Extract anatomical segments (exclude background) and keep background copy for one-hot encoding
         num_segments = self.num_segments or 0
-        segments_np = seg_masks_np[:num_segments] if num_segments > 0 else np.zeros((0, *seg_masks_np.shape[1:]), dtype=np.uint8)
+        if num_segments > 0:
+            segments_np = seg_masks_np[:num_segments]
+        else:
+            segments_np = np.zeros((0, *seg_masks_np.shape[1:]), dtype=np.uint8)
+        segments_with_background = seg_masks_np.astype(np.float32)
 
         # Load all other data modalities
-        boxes = self._load_boxes(dicom_id)                                    # Abnormality bounding boxes
-        transcript_payload = self._load_transcript(dicom_id)                  # Radiologist report
+        boxes = self._load_boxes(dicom_id)                                      # Abnormality bounding boxes
+        transcript_payload = self._load_transcript(dicom_id)                    # Radiologist report
         labels_vec, label_names, labels_row = self.label_proc.vector(dicom_id)  # Binary disease labels
-        final_dx, diagnoses = self.label_proc.diagnoses(dicom_id)             # Text diagnoses
-        times_sec, xy_norm, dwell = self._load_fixations(dicom_id)            # Eye tracking data
+        final_dx, diagnoses = self.label_proc.diagnoses(dicom_id)               # Text diagnoses
+        classification = self.label_proc.classification_label(dicom_id)         # Single-label classification
+        times_sec, xy_norm, dwell_ms = self._load_fixations(dicom_id)           # Eye tracking data
 
-        # Convert normalized gaze coordinates to pixel coordinates
+        # Convert normalized gaze coordinates to pixel coordinates (source resolution and resized image)
         height, width = seg_masks_np.shape[1:]
+        target_height, target_width = DEFAULT_IMAGE_SIZE
+
         if xy_norm.size == 0:
+            xy_norm_arr = np.zeros((0, 2), dtype=np.float32)
             xy_px = np.zeros((0, 2), dtype=np.float32)
+            xy_resized_px = np.zeros((0, 2), dtype=np.float32)
         else:
-            # Convert from normalized [0,1] to pixel coordinates
+            xy_norm_arr = xy_norm.astype(np.float32)
             xy_px = np.stack(
                 [
-                    xy_norm[:, 0] * (width - 1),   # X coordinate
-                    xy_norm[:, 1] * (height - 1),  # Y coordinate
+                    xy_norm_arr[:, 0] * (width - 1),
+                    xy_norm_arr[:, 1] * (height - 1),
+                ],
+                axis=1,
+            ).astype(np.float32)
+            xy_resized_px = np.stack(
+                [
+                    xy_norm_arr[:, 0] * (target_width - 1),
+                    xy_norm_arr[:, 1] * (target_height - 1),
                 ],
                 axis=1,
             ).astype(np.float32)
@@ -707,10 +808,8 @@ class EGDCXRDataset(Dataset):
         T = xy_px.shape[0]  # Number of fixations
         seg_hits = np.zeros((T, num_segments), dtype=np.float32)
         if num_segments > 0 and T > 0:
-            # Round coordinates and clip to image bounds
             xs = np.clip(np.round(xy_px[:, 0]).astype(int), 0, width - 1)
             ys = np.clip(np.round(xy_px[:, 1]).astype(int), 0, height - 1)
-            # Check which segments contain each fixation point
             hits = segments_np[:, ys, xs] > 0
             seg_hits = hits.T.astype(np.float32)
 
@@ -723,50 +822,132 @@ class EGDCXRDataset(Dataset):
             for t in range(T):
                 x = int(xs_int[t])
                 y = int(ys_int[t])
-                # Check if fixation point is inside any bounding box
                 for box in boxes:
                     cls_id = box.cls_id
                     if 0 <= cls_id < num_box_classes and box.x1 <= x < box.x2 and box.y1 <= y < box.y2:
                         box_hits[t, cls_id] = 1.0
 
+        # Build dense one-hot masks for bounding boxes
+        if num_box_classes > 0:
+            box_masks_np = np.zeros((num_box_classes, height, width), dtype=np.float32)
+            for box in boxes:
+                if 0 <= box.cls_id < num_box_classes:
+                    x1 = np.clip(box.x1, 0, width)
+                    x2 = np.clip(box.x2, 0, width)
+                    y1 = np.clip(box.y1, 0, height)
+                    y2 = np.clip(box.y2, 0, height)
+                    if x2 > x1 and y2 > y1:
+                        box_masks_np[box.cls_id, y1:y2, x1:x2] = 1.0
+        else:
+            box_masks_np = np.zeros((0, height, width), dtype=np.float32)
+
         # Load and preprocess chest X-ray image
         image_arr = self._load_dicom_image(dicom_id)
         if image_arr is None:
-            # Create dummy image if DICOM not available
-            image_tensor = torch.zeros(1, 224, 224, dtype=torch.float32)
+            image_tensor = torch.zeros(1, target_height, target_width, dtype=torch.float32)
         else:
-            # Convert to tensor and resize to standard size
             img_tensor = torch.from_numpy(image_arr).unsqueeze(0).float()
             image_tensor = F.interpolate(
-                img_tensor.unsqueeze(0), size=(224, 224), mode="bilinear", align_corners=False
+                img_tensor.unsqueeze(0), size=(target_height, target_width), mode="bilinear", align_corners=False
+            ).squeeze(0)
+
+        # Resize segmentation masks and bounding box masks to the target image resolution
+        segments_tensor = torch.from_numpy(segments_with_background)
+        if segments_tensor.shape[0] == 0:
+            segments_resized = torch.zeros((0, target_height, target_width), dtype=torch.float32)
+        else:
+            segments_resized = F.interpolate(
+                segments_tensor.unsqueeze(0), size=(target_height, target_width), mode="nearest"
+            ).squeeze(0)
+
+        box_masks_tensor = torch.from_numpy(box_masks_np)
+        if box_masks_tensor.shape[0] == 0:
+            box_masks_resized = torch.zeros((0, target_height, target_width), dtype=torch.float32)
+        else:
+            box_masks_resized = F.interpolate(
+                box_masks_tensor.unsqueeze(0), size=(target_height, target_width), mode="nearest"
             ).squeeze(0)
 
         # Prepare metadata for region and class names
         segment_names = self.region_names if self.region_names else [f"segment_{i}" for i in range(num_segments)]
+        segment_names_with_background = list(segment_names)
+        if segments_resized.shape[0] > len(segment_names_with_background):
+            segment_names_with_background.append("background")
         box_class_names = self.box_class_names if self.box_class_names else [f"class_{i}" for i in range(self.num_box_classes)]
+
+        # Classification payload
+        classification_payload = {
+            "index": classification.index,
+            "name": classification.name,
+            "one_hot": classification.one_hot(),
+            "classes": list(classification.classes),
+            "per_class": classification.per_class,
+            "positives": list(classification.positives),
+            "ambiguous": classification.ambiguous,
+        }
+
+        # Bounding box payload for downstream processing
+        if width > 1:
+            scale_x = (target_width - 1) / (width - 1)
+        else:
+            scale_x = 1.0
+        if height > 1:
+            scale_y = (target_height - 1) / (height - 1)
+        else:
+            scale_y = 1.0
+
+        boxes_payload = [
+            {
+                "x1": box.x1,
+                "y1": box.y1,
+                "x2": box.x2,
+                "y2": box.y2,
+                "class_id": box.cls_id,
+                "class_name": box.cls_name,
+                "x1_resized": int(round(box.x1 * scale_x)),
+                "y1_resized": int(round(box.y1 * scale_y)),
+                "x2_resized": int(round(box.x2 * scale_x)),
+                "y2_resized": int(round(box.y2 * scale_y)),
+            }
+            for box in boxes
+        ]
+
+        # Fixation payload with explicit x/y/duration entries
+        duration_sec = (dwell_ms.astype(np.float32) / 1000.0).astype(np.float32)
+        fixations_payload = {
+            "xy": torch.from_numpy(xy_px.astype(np.float32)),
+            "xy_resized": torch.from_numpy(xy_resized_px.astype(np.float32)),
+            "xy_norm": torch.from_numpy(xy_norm_arr),
+            "time": torch.from_numpy(times_sec.astype(np.float32)),
+            "dwell": torch.from_numpy(dwell_ms.astype(np.float32)),
+            "duration": torch.from_numpy(duration_sec),
+            "seg_hits": torch.from_numpy(seg_hits).float(),
+            "box_hits": torch.from_numpy(box_hits).float(),
+        }
 
         # Assemble the complete multimodal sample
         sample = {
-            "dicom_id": dicom_id,                    # Case identifier
-            "image": image_tensor,                   # Chest X-ray image (1, 224, 224)
-            "fixations": {                          # Eye tracking data and mappings
-                "xy": torch.from_numpy(xy_px.astype(np.float32)),           # Gaze coordinates (T, 2)
-                "time": torch.from_numpy(times_sec.astype(np.float32)),     # Timestamps (T,)
-                "dwell": torch.from_numpy(dwell.astype(np.float32)),        # Fixation durations (T,)
-                "seg_hits": torch.from_numpy(seg_hits).float(),             # Segment hits (T, num_segments)
-                "box_hits": torch.from_numpy(box_hits).float(),             # Box hits (T, num_box_classes)
+            "dicom_id": dicom_id,                         # Case identifier
+            "image": image_tensor,                        # Chest X-ray image (1, H, W)
+            "fixations": fixations_payload,               # Eye tracking data and mappings
+            "transcript": transcript_payload,             # Radiologist report
+            "segments": segments_resized.float(),         # Segmentation one-hot (includes background)
+            "box_masks": box_masks_resized.float(),       # Bounding box one-hot masks
+            "boxes": boxes_payload,                       # Bounding box coordinates & classes
+            "labels": {                                   # Diagnostic labels
+                "binary": labels_vec.float(),             # Binary disease labels
+                "binary_names": label_names,              # Names of label columns
+                "final_diagnosis": final_dx,              # Primary diagnosis text
+                "diagnoses": diagnoses,                   # All diagnoses list
+                "raw_row": labels_row,                    # Raw CSV row data
+                "classification": classification_payload, # Single-label classification
             },
-            "transcript": transcript_payload,        # Radiologist report
-            "labels": {                             # Diagnostic labels
-                "binary": labels_vec.float(),       # Binary disease labels
-                "binary_names": label_names,        # Names of label columns
-                "final_diagnosis": final_dx,        # Primary diagnosis text
-                "diagnoses": diagnoses,             # All diagnoses list
-                "raw_row": labels_row,              # Raw CSV row data
-            },
-            "meta": {                               # Metadata
-                "segment_names": segment_names,     # Anatomical region names
-                "box_class_names": box_class_names, # Abnormality class names
+            "meta": {                                     # Metadata
+                "segment_names": segment_names,                      # Anatomical region names
+                "segment_names_with_background": segment_names_with_background,
+                "box_class_names": box_class_names,                  # Abnormality class names
+                "original_image_size": (height, width),              # Original resolution
+                "image_size": DEFAULT_IMAGE_SIZE,                    # Resized resolution
             },
         }
         return sample
@@ -798,43 +979,76 @@ def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     # Pad variable-length sequences to the same length
     xy = pad_sequence([item["fixations"]["xy"] for item in batch], batch_first=True)
+    xy_resized = pad_sequence([item["fixations"]["xy_resized"] for item in batch], batch_first=True)
+    xy_norm = pad_sequence([item["fixations"]["xy_norm"] for item in batch], batch_first=True)
     dwell = pad_sequence([item["fixations"]["dwell"] for item in batch], batch_first=True)
+    duration = pad_sequence([item["fixations"]["duration"] for item in batch], batch_first=True)
     times = pad_sequence([item["fixations"]["time"] for item in batch], batch_first=True)
     seg_hits = pad_sequence([item["fixations"]["seg_hits"] for item in batch], batch_first=True)
     box_hits = pad_sequence([item["fixations"]["box_hits"] for item in batch], batch_first=True)
 
     # Stack fixed-size tensors
     images = torch.stack([item["image"] for item in batch], dim=0)
+    segments = torch.stack([item["segments"] for item in batch], dim=0)
+    box_masks = torch.stack([item["box_masks"] for item in batch], dim=0)
     transcripts = [item["transcript"] for item in batch]  # Keep as list (variable content)
 
     # Stack binary labels and preserve metadata
     labels_binary = torch.stack([item["labels"]["binary"] for item in batch], dim=0)
+    classification_one_hot = torch.stack([item["labels"]["classification"]["one_hot"] for item in batch], dim=0)
+    classification_indices = torch.tensor(
+        [item["labels"]["classification"]["index"] for item in batch], dtype=torch.long
+    )
+    classification_names = [item["labels"]["classification"]["name"] for item in batch]
+    classification_ambiguous = [item["labels"]["classification"]["ambiguous"] for item in batch]
+    classification_per_class = [item["labels"]["classification"]["per_class"] for item in batch]
+    classification_positives = [item["labels"]["classification"]["positives"] for item in batch]
+    classification_classes = batch[0]["labels"]["classification"]["classes"]
+
     labels_dict = {
         "binary": labels_binary,
         "binary_names": batch[0]["labels"]["binary_names"],  # Same across batch
         "final_diagnosis": [item["labels"]["final_diagnosis"] for item in batch],
         "diagnoses": [item["labels"]["diagnoses"] for item in batch],
         "raw_row": [item["labels"]["raw_row"] for item in batch],
+        "classification": {
+            "one_hot": classification_one_hot,
+            "indices": classification_indices,
+            "names": classification_names,
+            "classes": classification_classes,
+            "ambiguous": classification_ambiguous,
+            "per_class": classification_per_class,
+            "positives": classification_positives,
+        },
     }
 
     # Preserve metadata (same across batch)
     meta = {
         "segment_names": batch[0]["meta"]["segment_names"],
         "box_class_names": batch[0]["meta"]["box_class_names"],
+        "segment_names_with_background": batch[0]["meta"]["segment_names_with_background"],
+        "image_size": batch[0]["meta"]["image_size"],
+        "original_image_size": batch[0]["meta"]["original_image_size"],
     }
 
     return {
         "dicom_ids": dicom_ids,           # List of case IDs
         "images": images,                 # Stacked images (B, 1, 224, 224)
+        "segments": segments,             # Stacked segmentation masks (B, C, H, W)
+        "box_masks": box_masks,           # Stacked bounding box masks (B, K, H, W)
         "fixations": {                    # Padded fixation data
             "xy": xy,                     # Padded coordinates (B, max_T, 2)
+            "xy_resized": xy_resized,     # Coordinates aligned with resized image
+            "xy_norm": xy_norm,           # Normalized coordinates in [0,1]
             "dwell": dwell,               # Padded durations (B, max_T)
+            "duration": duration,         # Padded durations in seconds (B, max_T)
             "time": times,                # Padded timestamps (B, max_T)
             "seg_hits": seg_hits,         # Padded segment hits (B, max_T, num_segments)
             "box_hits": box_hits,         # Padded box hits (B, max_T, num_box_classes)
             "lengths": lengths,           # Original sequence lengths (B,)
         },
         "transcripts": transcripts,       # List of transcript dictionaries
+        "boxes": [item["boxes"] for item in batch],  # Bounding box metadata per sample
         "labels": labels_dict,            # Batched labels and metadata
         "meta": meta,                     # Metadata (same across batch)
     }

@@ -1,0 +1,116 @@
+# Configuration for ST01 Pretrained Image + Bounding Box + Segmentation + Gaze + Text training
+# This config enables all modalities for comprehensive training
+
+input_path:
+  gaze_raw: "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0"
+  segmentation_dir: "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/segmentation"
+  transcripts_dir: "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/transcripts"
+  dicom_raw: "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/dicom"
+
+split_files:
+  dir: "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/configs/splits"
+
+train:
+  # Training hyperparameters
+  batch_size: 4
+  epochs: 20
+  lr: 2e-4
+  weight_decay: 2.5e-4
+  max_fixations: 64
+  
+  # Model architecture
+  txt_dim: 256
+  enc_dim: 256
+  max_decode_len: 64
+  
+  # Data loading
+  num_workers: 0
+  
+  # Reproducibility
+  seed: 0
+  
+  # Checkpointing
+  checkpoint_dir: "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/runs/checkpoints"
+  
+  # Regularization
+  encoder_dropout: 0.1
+  label_dropout: 0.2
+  
+  # Modality flags - image disabled since DICOM files are not available
+  use_bbox: true
+  use_seg: true
+  use_image: false  # Disabled since DICOM images are not available in this dataset
+  use_text: true
+  use_gaze: true
+  
+  # Pretrained image encoder
+  pretrained_image: false  # Disabled since DICOM images are not available
+
+# Model configuration
+model:
+  # RNN-based gaze intent model
+  type: "GazeSeqRNNAttend"
+  
+  # Feature dimensions
+  img_out_dim: 256
+  intent_dim: 256
+  dec_dim: 256
+  
+  # Vocabulary settings
+  vocab_min_freq: 1
+  vocab_max_size: 30000
+  
+  # Classification
+  num_classes: 3  # CHF, pneumonia, Normal
+  class_names: ["CHF", "pneumonia", "Normal"]
+
+# Data augmentation (if needed)
+augmentation:
+  # Image augmentation
+  image:
+    enabled: false
+    brightness: 0.1
+    contrast: 0.1
+    saturation: 0.1
+    hue: 0.05
+  
+  # Gaze augmentation
+  gaze:
+    enabled: false
+    noise_std: 0.01
+    dropout_prob: 0.1
+
+# Logging and monitoring
+logging:
+  log_dir: "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/runs/logs"
+  log_interval: 100
+  save_interval: 5
+  
+  # Metrics to track
+  metrics:
+    - "accuracy"
+    - "macro_precision"
+    - "macro_recall"
+    - "macro_f1"
+    - "per_class_accuracy"
+    - "per_class_precision"
+    - "per_class_recall"
+    - "per_class_f1"
+
+# Early stopping
+early_stopping:
+  enabled: true
+  patience: 5
+  min_delta: 0.001
+  monitor: "val_loss"
+  mode: "min"
+
+# Learning rate scheduling
+lr_scheduler:
+  enabled: true
+  type: "ReduceLROnPlateau"
+  factor: 0.5
+  patience: 3
+  min_lr: 1e-6
+  monitor: "val_loss"
+  mode: "min"

@@ -1,0 +1,153 @@
+Starting ST01 (prtr+img+bs) at: Mon Oct 27 07:12:31 AM CDT 2025
+
+Loading configuration from: configs/st01_prtr_img_bs_gaze_text.yaml
+{
+    "input_path": {
+        "gaze_raw": "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0",
+        "segmentation_dir": "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/segmentation",
+        "transcripts_dir": "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/transcripts",
+        "dicom_raw": "/project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/dicom"
+    },
+    "split_files": {
+        "dir": "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/configs/splits"
+    },
+    "train": {
+        "batch_size": 4,
+        "epochs": 20,
+        "lr": "2e-4",
+        "weight_decay": 0.00025,
+        "max_fixations": 64,
+        "txt_dim": 256,
+        "enc_dim": 256,
+        "max_decode_len": 64,
+        "num_workers": 0,
+        "seed": 0,
+        "checkpoint_dir": "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/runs/checkpoints",
+        "encoder_dropout": 0.1,
+        "label_dropout": 0.2,
+        "use_bbox": true,
+        "use_seg": true,
+        "use_image": false,
+        "use_text": true,
+        "use_gaze": true,
+        "pretrained_image": false
+    },
+    "model": {
+        "type": "GazeSeqRNNAttend",
+        "img_out_dim": 256,
+        "intent_dim": 256,
+        "dec_dim": 256,
+        "vocab_min_freq": 1,
+        "vocab_max_size": 30000,
+        "num_classes": 3,
+        "class_names": [
+            "CHF",
+            "pneumonia",
+            "Normal"
+        ]
+    },
+    "augmentation": {
+        "image": {
+            "enabled": false,
+            "brightness": 0.1,
+            "contrast": 0.1,
+            "saturation": 0.1,
+            "hue": 0.05
+        },
+        "gaze": {
+            "enabled": false,
+            "noise_std": 0.01,
+            "dropout_prob": 0.1
+        }
+    },
+    "logging": {
+        "log_dir": "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/runs/logs",
+        "log_interval": 100,
+        "save_interval": 5,
+        "metrics": [
+            "accuracy",
+            "macro_precision",
+            "macro_recall",
+            "macro_f1",
+            "per_class_accuracy",
+            "per_class_precision",
+            "per_class_recall",
+            "per_class_f1"
+        ]
+    },
+    "early_stopping": {
+        "enabled": true,
+        "patience": 5,
+        "min_delta": 0.001,
+        "monitor": "val_loss",
+        "mode": "min"
+    },
+    "lr_scheduler": {
+        "enabled": true,
+        "type": "ReduceLROnPlateau",
+        "factor": 0.5,
+        "patience": 3,
+        "min_lr": "1e-6",
+        "monitor": "val_loss",
+        "mode": "min"
+    }
+}
+Using device: cuda
+Data splits - Train: 756, Val: 108, Test: 219
+Loading training dataset...
+EGDCXRRewrittenDataset ready: 756 cases | classes=3
+Loading validation dataset...
+EGDCXRRewrittenDataset ready: 108 cases | classes=3
+Loading test dataset...
+EGDCXRRewrittenDataset ready: 219 cases | classes=3
+Creating data loaders...
+Building model and vocabulary...
+Model created with 958984 parameters
+Vocabulary size: 4
+Training on 3 classes: ['CHF', 'pneumonia', 'Normal']
+
+Starting training for 20 epochs...
+  Checkpoint saved to /project/hnguyen2/mvu9/folder_04_ma/gaze-01/runs/checkpoints/20251027-071251_best.pt
+
+Epoch 01 | Train Loss: 1.1030 | Val Loss: 1.0804 | Time: 19.22s
+================================================================================
+TRAIN RESULTS:
+  Samples: 756 | Correct: 245 | Accuracy: 0.324
+  Macro Precision: 0.338 | Macro Recall: 0.324 | Macro F1: 0.312 | Macro AUC: 0.000
+
+Per-class metrics:
+  CHF       : Acc=0.453, P=0.312, R=0.453, F1=0.370, AUC=0.000
+  pneumonia : Acc=0.351, P=0.315, R=0.351, F1=0.332, AUC=0.000
+  Normal    : Acc=0.167, P=0.385, R=0.167, F1=0.233, AUC=0.000
+
+VAL RESULTS:
+  Samples: 108 | Correct: 36 | Accuracy: 0.333
+  Macro Precision: 0.111 | Macro Recall: 0.333 | Macro F1: 0.167 | Macro AUC: 0.000
+
+Per-class metrics:
+  CHF       : Acc=0.000, P=0.000, R=0.000, F1=0.000, AUC=0.000
+  pneumonia : Acc=1.000, P=0.333, R=1.000, F1=0.500, AUC=0.000
+  Normal    : Acc=0.000, P=0.000, R=0.000, F1=0.000, AUC=0.000
+================================================================================
+  Checkpoint saved to /project/hnguyen2/mvu9/folder_04_ma/gaze-01/runs/checkpoints/20251027-071251_best.pt
+
+Epoch 02 | Train Loss: 1.0711 | Val Loss: 1.0180 | Time: 19.01s
+================================================================================
+TRAIN RESULTS:
+  Samples: 756 | Correct: 305 | Accuracy: 0.403
+  Macro Precision: 0.405 | Macro Recall: 0.403 | Macro F1: 0.404 | Macro AUC: 0.000
+
+Per-class metrics:
+  CHF       : Acc=0.437, P=0.422, R=0.437, F1=0.429, AUC=0.000
+  pneumonia : Acc=0.367, P=0.354, R=0.367, F1=0.360, AUC=0.000
+  Normal    : Acc=0.406, P=0.438, R=0.406, F1=0.421, AUC=0.000
+
+VAL RESULTS:
+  Samples: 108 | Correct: 55 | Accuracy: 0.509
+  Macro Precision: 0.506 | Macro Recall: 0.509 | Macro F1: 0.422 | Macro AUC: 0.000
+
+Per-class metrics:
+  CHF       : Acc=0.694, P=0.472, R=0.694, F1=0.562, AUC=0.000
+  pneumonia : Acc=0.028, P=0.500, R=0.028, F1=0.053, AUC=0.000
+  Normal    : Acc=0.806, P=0.547, R=0.806, F1=0.652, AUC=0.000
+================================================================================
