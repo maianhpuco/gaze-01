@@ -1,0 +1,29 @@
+dataset_name: "egd-cxr"
+input_path:
+  gaze_raw: /project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0
+  dicom_raw: /project/hnguyen2/mvu9/datasets/gaze_data/egd-cxr/dicom_raw
+  segmentation_dir: /project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/audio_segmentation_transcripts
+  transcripts_dir: /project/hnguyen2/mvu9/datasets/gaze_data/egd-cxr/transcripts
+output_path:
+  base_plots_dir: plots
+split_files:
+  dir: config/splits
+train:
+  batch_size: 48
+  epochs: 100
+  lr: 0.0002
+  weight_decay: 0.00025
+  max_fixations: 80
+  txt_dim: 256
+  enc_dim: 256
+  max_decode_len: 64
+  num_workers: 4
+  seed: 123
+  checkpoint_dir: runs/checkpoints_st01_pretrained_image_only
+  use_bbox: false
+  use_seg: false
+  use_image: true
+  use_text: false
+  encoder_dropout: 0.1
+  label_dropout: 0.2
+  pretrained_image: true

@@ -40,10 +40,13 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from egd_cxr_dataset import ConfigLoader, EGDCXRDataset, create_dataloader  # noqa: E402
-from egd_cxr_dataset.models.gaze_intent import GazeIntent2TranscriptAndLabels  # noqa: E402
+from egd_cxr_dataset.models.gaze_intent_seq_rnn import (  # noqa: E402
+    GazeSeqRNNAttend as GazeIntent2TranscriptAndLabels,
+)
 from egd_cxr_dataset.utils.vocab import Vocab  # noqa: E402
 from main_train_silence_thought import (  # noqa: E402
     format_accuracy,
+    format_summary,
     read_split_ids,
     run_epoch,
     set_seed,
@@ -216,7 +219,7 @@ def main() -> None:
     label_names = checkpoint.get("label_names", test_dataset.label_proc.schema.class_columns)
 
     print(f"Evaluating checkpoint {checkpoint_path} on {len(test_ids)} test cases")
-    test_loss, test_acc, batches = run_epoch(
+    test_loss, test_acc, batches, test_summary = run_epoch(
         model,
         test_loader,
         device=device,
@@ -226,6 +229,7 @@ def main() -> None:
     )
 
     print(f"Test loss {test_loss:.4f} over {batches} batches")
+    print("Test summary:   " + format_summary(test_summary))
     print("Test accuracy per class:")
     print("  " + format_accuracy(label_names, test_acc))
 

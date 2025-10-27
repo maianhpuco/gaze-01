@@ -5,3 +5,17 @@ logs/
 *.pt
 *.pth
 *.ckpt
+# Basics
+.DS_Store
+__pycache__/
+# Envs & builds
+.venv/
+venv/
+build/
+dist/
+
+
+# checkpoints/
+# *.ckpt
+# *.pth
+# *.pt

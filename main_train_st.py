@@ -44,7 +44,9 @@ if str(SRC) not in sys.path:
 
 # Import custom dataset and model classes
 from egd_cxr_dataset import ConfigLoader, EGDCXRDataset, build_vocab, create_dataloader
-from egd_cxr_dataset.models.gaze_intent import GazeIntent2TranscriptAndLabels
+from egd_cxr_dataset.models.gaze_intent_seq_rnn import (
+    GazeSeqRNNAttend as GazeIntent2TranscriptAndLabels,
+)
 
 
 def set_seed(seed: int = 0) -> None:
@@ -128,6 +130,76 @@ def compute_class_accuracy(pred: torch.Tensor, target: torch.Tensor) -> torch.Te
     return correct.mean(dim=0)
 
 
+def _average_precision(y_true: np.ndarray, y_score: np.ndarray) -> float:
+    if y_true.sum() == 0:
+        return 0.0
+    order = np.argsort(-y_score)
+    y_true = y_true[order]
+    tp = np.cumsum(y_true)
+    fp = np.cumsum(1.0 - y_true)
+    denom = np.maximum(tp + fp, 1e-6)
+    precision = tp / denom
+    recall = tp / (y_true.sum() + 1e-6)
+    precision = np.concatenate(([precision[0]], precision))
+    recall = np.concatenate(([0.0], recall))
+    return float(np.sum((recall[1:] - recall[:-1]) * precision[1:]))
+
+
+def compute_pr_auc(pred: torch.Tensor, target: torch.Tensor) -> Tuple[float, float]:
+    preds = pred.detach().cpu().numpy()
+    targets = target.detach().cpu().numpy()
+    macro_vals: List[float] = []
+    for c in range(preds.shape[1]):
+        ap = _average_precision(targets[:, c], preds[:, c])
+        if ap > 0.0:
+            macro_vals.append(ap)
+    macro_pr = float(np.mean(macro_vals)) if macro_vals else 0.0
+    micro_pr = _average_precision(targets.reshape(-1), preds.reshape(-1))
+    return macro_pr, micro_pr
+
+
+def compute_multilabel_summary(pred: torch.Tensor, target: torch.Tensor) -> Dict[str, float]:
+    """
+    Compute aggregate multi-label classification metrics.
+
+    Returns macro accuracy, macro F1, and micro precision/recall/F1.
+    """
+    eps = 1e-6
+    bin_pred = (pred >= 0.5).float()
+    bin_target = (target >= 0.5).float()
+
+    tp = (bin_pred * bin_target).sum(dim=0)
+    fp = (bin_pred * (1.0 - bin_target)).sum(dim=0)
+    fn = ((1.0 - bin_pred) * bin_target).sum(dim=0)
+
+    precision = tp / (tp + fp + eps)
+    recall = tp / (tp + fn + eps)
+    f1 = 2 * precision * recall / (precision + recall + eps)
+
+    macro_acc = float(compute_class_accuracy(pred, target).mean().item())
+    macro_f1 = float(f1.mean().item())
+
+    tp_micro = float(tp.sum().item())
+    fp_micro = float(fp.sum().item())
+    fn_micro = float(fn.sum().item())
+
+    micro_precision = tp_micro / (tp_micro + fp_micro + eps)
+    micro_recall = tp_micro / (tp_micro + fn_micro + eps)
+    micro_f1 = 2 * micro_precision * micro_recall / (micro_precision + micro_recall + eps)
+
+    macro_pr_auc, micro_pr_auc = compute_pr_auc(pred, target)
+
+    return {
+        "macro_acc": macro_acc,
+        "macro_f1": float(macro_f1),
+        "micro_precision": float(micro_precision),
+        "micro_recall": float(micro_recall),
+        "micro_f1": float(micro_f1),
+        "macro_pr_auc": float(macro_pr_auc),
+        "micro_pr_auc": float(micro_pr_auc),
+    }
+
+
 def run_epoch(
     model: GazeIntent2TranscriptAndLabels,
     loader,
@@ -136,7 +208,7 @@ def run_epoch(
     vocab,
     optimiser: Optional[AdamW],
     desc: str = "",
-) -> Tuple[float, torch.Tensor, int]:
+) -> Tuple[float, torch.Tensor, int, Dict[str, float]]:
     """
     Run a single training or evaluation epoch.
     
@@ -152,7 +224,7 @@ def run_epoch(
         desc: Description for progress bar
         
     Returns:
-        Tuple of (average_loss, per_class_accuracy, total_cases_processed)
+        Tuple of (average_loss, per_class_accuracy, total_cases_processed, summary_metrics)
     """
     # Determine if we're in training or evaluation mode
     train_mode = optimiser is not None
@@ -227,13 +299,25 @@ def run_epoch(
                     if logits.numel() == 0:
                         continue
                     tgt = vocab.encode(seg.get("text", ""), add_eos=True).to(device)
-                    loss_text = loss_text + F.cross_entropy(logits, tgt, reduction="sum")
-                    tok_total += tgt.numel()
+                    if tgt.numel() < 2:
+                        continue  # need at least BOS/first token and target
+                    loss_text = loss_text + F.cross_entropy(logits, tgt[1:], reduction="sum")
+                    tok_total += tgt.numel() - 1
                 if tok_total > 0:
                     loss_text = loss_text / tok_total
-            
+
+            # Optional speak-gate supervision (mark segment starts)
+            loss_speak = torch.tensor(0.0, device=device)
+            if model.use_text and isinstance(transcript, dict) and transcript.get("segments"):
+                speak_tgt = torch.zeros_like(outputs["speak_logits"])
+                begins = [float(seg.get("begin", 0.0)) for seg in transcript.get("segments", [])]
+                for b in begins:
+                    nearest_idx = int(torch.argmin(torch.abs(time_s - b)).item())
+                    speak_tgt[nearest_idx] = 1.0
+                loss_speak = F.binary_cross_entropy_with_logits(outputs["speak_logits"], speak_tgt)
+
             # Combined loss (multi-task learning)
-            loss = loss_labels + loss_text
+            loss = loss_labels + loss_text + 0.1 * loss_speak
 
             # Accumulate loss and predictions for this case
             batch_loss += loss
@@ -273,7 +357,8 @@ def run_epoch(
     # Compute per-class accuracy and average loss
     per_class_acc = compute_class_accuracy(pred_tensor, target_tensor)
     avg_loss = total_loss / max(1, total_cases)
-    return avg_loss, per_class_acc, total_cases
+    summary_metrics = compute_multilabel_summary(pred_tensor, target_tensor)
+    return avg_loss, per_class_acc, total_cases, summary_metrics
 
 
 def build_model_and_vocab(
@@ -356,6 +441,19 @@ def format_accuracy(label_names: List[str], acc: torch.Tensor) -> str:
     return ", ".join(pieces)
 
 
+def format_summary(summary: Dict[str, float]) -> str:
+    """
+    Format aggregate metrics for quick display.
+    """
+    return (
+        f"macro-acc {summary['macro_acc']:.3f} | "
+        f"macro-F1 {summary['macro_f1']:.3f} | "
+        f"micro-P {summary['micro_precision']:.3f} | "
+        f"micro-R {summary['micro_recall']:.3f} | "
+        f"micro-F1 {summary['micro_f1']:.3f}"
+    )
+
+
 def save_checkpoint(
     path: Path,
     *,
@@ -411,8 +509,12 @@ def main() -> None:
                        help="Learning rate")
     parser.add_argument("--weight-decay", type=float, default=1e-4, 
                        help="Weight decay for regularization")
-    parser.add_argument("--max-fixations", type=int, default=None, 
-                       help="Maximum number of fixations per case (None for all)")
+    parser.add_argument(
+        "--max-fixations",
+        type=int,
+        default=64,
+        help="Maximum number of fixations per case (default: 64; set higher for longer sequences)",
+    )
     parser.add_argument("--txt-dim", type=int, default=256, 
                        help="Text decoder dimension")
     parser.add_argument("--enc-dim", type=int, default=256, 
@@ -610,10 +712,13 @@ def main() -> None:
         "use_text": args.use_text,
     }
 
+    train_summary = {"macro_acc": 0.0, "macro_f1": 0.0, "micro_f1": 0.0}
+    val_summary = {"macro_acc": 0.0, "macro_f1": 0.0, "micro_f1": 0.0}
+
     for epoch in range(1, args.epochs + 1):
         epoch_start = time.perf_counter()
         # Training epoch
-        train_loss, train_acc, _ = run_epoch(
+        train_loss, train_acc, _, train_summary = run_epoch(
             model,
             train_loader,
             device=device,
@@ -623,7 +728,7 @@ def main() -> None:
         )
         
         # Validation epoch
-        val_loss, val_acc, _ = run_epoch(
+        val_loss, val_acc, _, val_summary = run_epoch(
             model,
             val_loader,
             device=device,
@@ -638,6 +743,16 @@ def main() -> None:
             "train_loss": float(train_loss),
             "val_loss": float(val_loss),
             "epoch_seconds": float(epoch_duration),
+            "train_macro_acc": train_summary["macro_acc"],
+            "train_macro_f1": train_summary["macro_f1"],
+            "train_micro_f1": train_summary["micro_f1"],
+            "train_micro_precision": train_summary["micro_precision"],
+            "train_micro_recall": train_summary["micro_recall"],
+            "val_macro_acc": val_summary["macro_acc"],
+            "val_macro_f1": val_summary["macro_f1"],
+            "val_micro_f1": val_summary["micro_f1"],
+            "val_micro_precision": val_summary["micro_precision"],
+            "val_micro_recall": val_summary["micro_recall"],
         }
         is_best = val_loss < best_val_loss
         if is_best:
@@ -660,6 +775,8 @@ def main() -> None:
             f"Epoch {epoch:02d} | train loss {train_loss:.4f} | "
             f"val loss {val_loss:.4f} | time {epoch_duration:.2f}s"
         )
+        print("  Train summary: " + format_summary(train_summary))
+        print("  Val summary:   " + format_summary(val_summary))
         print("  Train accuracy per class:")
         print("    " + format_accuracy(label_names, train_acc))
         print("  Val accuracy per class:")
@@ -667,7 +784,7 @@ def main() -> None:
 
     # Final evaluation on test set
     print("\nEvaluating on test set...")
-    test_loss, test_acc, batches = run_epoch(
+    test_loss, test_acc, batches, test_summary = run_epoch(
         model,
         test_loader,
         device=device,
@@ -676,6 +793,7 @@ def main() -> None:
         desc="test",
     )
     print(f"Test loss {test_loss:.4f} over {batches} batches")
+    print("Test summary:   " + format_summary(test_summary))
     print("Test accuracy per class:")
     print("  " + format_accuracy(label_names, test_acc))
 
@@ -729,6 +847,21 @@ def main() -> None:
         "train_loss": float(last_train_loss),
         "val_loss": float(last_val_loss),
         "test_loss": float(test_loss),
+        "train_macro_acc": train_summary["macro_acc"],
+        "train_macro_f1": train_summary["macro_f1"],
+        "train_micro_f1": train_summary["micro_f1"],
+        "train_micro_precision": train_summary["micro_precision"],
+        "train_micro_recall": train_summary["micro_recall"],
+        "val_macro_acc": val_summary["macro_acc"],
+        "val_macro_f1": val_summary["macro_f1"],
+        "val_micro_f1": val_summary["micro_f1"],
+        "val_micro_precision": val_summary["micro_precision"],
+        "val_micro_recall": val_summary["micro_recall"],
+        "test_macro_acc": test_summary["macro_acc"],
+        "test_macro_f1": test_summary["macro_f1"],
+        "test_micro_f1": test_summary["micro_f1"],
+        "test_micro_precision": test_summary["micro_precision"],
+        "test_micro_recall": test_summary["micro_recall"],
         "test_accuracy_per_class": {
             name: float(val) for name, val in zip(label_names, test_acc.tolist())
         },
