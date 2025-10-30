@@ -1,0 +1,38 @@
+Starting training at: Thu Oct 30 01:30:54 AM CDT 2025
+EGDCXRDataset ready: 1083 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 217 cases | regions=4 | bbox_classes=17
+Epoch 001 | time=217.36s | train: loss=4.3944 cls=0.8925 txt=3.5019 | val: loss=2.2386 acc=0.336
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 002 | time=218.92s | train: loss=3.6933 cls=0.6723 txt=3.0211 | val: loss=0.5354 acc=0.793
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 003 | time=216.90s | train: loss=3.4279 cls=0.5884 txt=2.8394 | val: loss=0.3968 acc=0.848
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 004 | time=211.70s | train: loss=3.2749 cls=0.5156 txt=2.7593 | val: loss=0.2956 acc=0.899
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 005 | time=215.41s | train: loss=3.1415 cls=0.4678 txt=2.6737 | val: loss=0.2141 acc=0.954
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 006 | time=212.36s | train: loss=3.0307 cls=0.4023 txt=2.6283 | val: loss=0.2293 acc=0.931
+Epoch 007 | time=212.32s | train: loss=2.9525 cls=0.3676 txt=2.5848 | val: loss=0.2753 acc=0.894
+Epoch 008 | time=216.98s | train: loss=2.8738 cls=0.3341 txt=2.5397 | val: loss=0.1227 acc=0.972
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 009 | time=215.87s | train: loss=2.7635 cls=0.2780 txt=2.4855 | val: loss=0.1396 acc=0.954
+Epoch 010 | time=211.48s | train: loss=2.7354 cls=0.2636 txt=2.4718 | val: loss=0.4855 acc=0.783
+Epoch 011 | time=210.83s | train: loss=2.7188 cls=0.2718 txt=2.4470 | val: loss=0.1037 acc=0.986
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 012 | time=213.62s | train: loss=2.6387 cls=0.2469 txt=2.3917 | val: loss=0.0752 acc=0.986
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 013 | time=214.98s | train: loss=2.5998 cls=0.2318 txt=2.3681 | val: loss=0.0861 acc=0.986
+Epoch 014 | time=214.01s | train: loss=2.5862 cls=0.2133 txt=2.3728 | val: loss=0.0478 acc=1.000
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 015 | time=212.59s | train: loss=2.4852 cls=0.2135 txt=2.2717 | val: loss=0.0489 acc=1.000
+Epoch 016 | time=212.25s | train: loss=2.4879 cls=0.2112 txt=2.2767 | val: loss=0.0413 acc=1.000
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 017 | time=217.12s | train: loss=2.4831 cls=0.2253 txt=2.2578 | val: loss=0.0355 acc=1.000
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 018 | time=218.03s | train: loss=2.4630 cls=0.2218 txt=2.2412 | val: loss=0.1749 acc=0.945
+Epoch 019 | time=214.69s | train: loss=2.4396 cls=0.2182 txt=2.2214 | val: loss=0.0573 acc=0.991
+Epoch 020 | time=215.08s | train: loss=2.3991 cls=0.2171 txt=2.1819 | val: loss=0.0539 acc=0.991
+
+Training done in 72.28 min. Test: loss=0.0539 acc=0.9908
+Done.
+Finished at: Thu Oct 30 02:44:01 AM CDT 2025

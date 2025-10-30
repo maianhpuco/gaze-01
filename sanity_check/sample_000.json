@@ -1,0 +1,519 @@
+{
+  "sample_index": 0,
+  "timestamp": 0,
+  "sample_data": {
+    "segment_presence": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "box_presence": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "fixations": {
+      "xy": {
+        "_tensor_info": {
+          "shape": [
+            64,
+            2
+          ],
+          "dtype": "torch.float32",
+          "numel": 128,
+          "sample_values": [
+            1559.6385498046875,
+            1915.8453369140625,
+            1605.8912353515625,
+            963.9750366210938,
+            1604.0277099609375,
+            1031.84765625,
+            1608.24365234375,
+            1136.84814453125,
+            1300.2996826171875,
+            1003.950927734375
+          ]
+        }
+      },
+      "dwell": [
+        291.02001953125,
+        145.510009765625,
+        194.3400115966797,
+        138.6699981689453,
+        236.3300018310547,
+        258.78997802734375,
+        318.3600158691406,
+        593.75,
+        287.1100158691406,
+        373.0500183105469,
+        300.7799987792969,
+        230.47000122070312,
+        148.44000244140625,
+        163.0900115966797,
+        97.65999603271484,
+        280.27001953125,
+        372.07000732421875,
+        138.6699981689453,
+        346.67999267578125,
+        224.61000061035156,
+        79.0999984741211,
+        553.7099609375,
+        123.04999542236328,
+        14.65000057220459,
+        197.27000427246094,
+        167.97000122070312,
+        232.4199981689453,
+        469.72998046875,
+        107.41999816894531,
+        437.5,
+        362.3000183105469,
+        200.20001220703125,
+        338.8699951171875,
+        274.4100036621094,
+        16.600000381469727,
+        429.69000244140625,
+        59.56999969482422,
+        30.270000457763672,
+        145.510009765625,
+        340.82000732421875,
+        334.96002197265625,
+        192.37998962402344,
+        122.06999969482422,
+        237.29998779296875,
+        139.65000915527344,
+        614.260009765625,
+        177.72999572753906,
+        354.4900207519531,
+        598.6300048828125,
+        65.43000030517578,
+        369.1399841308594,
+        74.22000122070312,
+        782.2300415039062,
+        292.9700012207031,
+        258.78997802734375,
+        210.94000244140625,
+        776.3699951171875,
+        319.3399963378906,
+        759.7699584960938,
+        431.6399841308594,
+        238.27999877929688,
+        463.8699951171875,
+        1255.8599853515625,
+        382.80999755859375
+      ],
+      "time": [
+        0.291020005941391,
+        0.45313000679016113,
+        0.892579972743988,
+        1.0341800451278687,
+        1.277340054512024,
+        1.5371099710464478,
+        1.8603500127792358,
+        2.4599599838256836,
+        2.7490200996398926,
+        3.1230499744415283,
+        3.4287099838256836,
+        3.6601600646972656,
+        4.066410064697266,
+        4.238279819488525,
+        4.341800212860107,
+        4.631840229034424,
+        5.029300212860107,
+        5.174799919128418,
+        5.522459983825684,
+        5.757810115814209,
+        5.837890148162842,
+        6.392580032348633,
+        6.518549919128418,
+        6.827149868011475,
+        7.300779819488525,
+        7.478519916534424,
+        7.720699787139893,
+        8.21679973602295,
+        8.330080032348633,
+        8.78905963897705,
+        9.176759719848633,
+        9.386719703674316,
+        9.75195026397705,
+        10.027339935302734,
+        10.044919967651367,
+        10.496089935302734,
+        10.5625,
+        10.741209983825684,
+        11.18262004852295,
+        11.53320026397705,
+        12.19530963897705,
+        12.40429973602295,
+        12.5341796875,
+        13.069339752197266,
+        13.472660064697266,
+        14.087889671325684,
+        14.288089752197266,
+        14.652339935302734,
+        15.258790016174316,
+        15.349610328674316,
+        15.93262004852295,
+        16.0283203125,
+        16.811519622802734,
+        17.113279342651367,
+        17.376949310302734,
+        17.662109375,
+        18.439449310302734,
+        19.020509719848633,
+        19.78125,
+        20.21875,
+        20.461910247802734,
+        21.3837890625,
+        22.919919967651367,
+        23.307619094848633
+      ],
+      "seg_hits": {
+        "_tensor_info": {
+          "shape": [
+            64,
+            4
+          ],
+          "dtype": "torch.float32",
+          "numel": 256,
+          "sample_values": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "box_hits": {
+        "_tensor_info": {
+          "shape": [
+            64,
+            17
+          ],
+          "dtype": "torch.float32",
+          "numel": 1088,
+          "sample_values": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "lengths": 64
+    },
+    "labels": {
+      "final_diagnosis": "PNEUMONIA,ORGANISM UNSPECIFIED",
+      "diagnoses": [
+        "PNEUMONIA,ORGANISM UNSPECIFIED",
+        "MAL NEO LIVER, PRIMARY"
+      ],
+      "classification": {
+        "one_hot": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "indices": 1,
+        "names": "pneumonia",
+        "classes": [
+          "CHF",
+          "pneumonia",
+          "Normal"
+        ],
+        "ambiguous": false,
+        "per_class": {
+          "CHF": 0,
+          "pneumonia": 1,
+          "Normal": 0
+        },
+        "positives": "('pneumonia',)",
+        "index": 1,
+        "name": "pneumonia"
+      },
+      "single_index": 1,
+      "single_name": "pneumonia",
+      "single_class_names": [
+        "CHF",
+        "pneumonia",
+        "Normal"
+      ]
+    },
+    "meta": {
+      "segment_names": [
+        "aortic_knob",
+        "left_lung",
+        "mediastanum",
+        "right_lung"
+      ],
+      "box_class_names": [
+        "cardiac silhouette",
+        "left clavicle",
+        "left costophrenic angle",
+        "left hilar structures",
+        "left lower lung zone",
+        "left lung",
+        "left mid lung zone",
+        "left upper lung zone",
+        "right clavicle",
+        "right costophrenic angle",
+        "right hilar structures",
+        "right lower lung zone",
+        "right lung",
+        "right mid lung zone",
+        "right upper lung zone",
+        "trachea",
+        "upper mediastinum"
+      ]
+    },
+    "boxes": [
+      "BoxRow(x1=1214, y1=1146, x2=2401, y2=1800, cls_id=0, cls_name='cardiac silhouette')",
+      "BoxRow(x1=1705, y1=54, x2=2933, y2=709, cls_id=1, cls_name='left clavicle')",
+      "BoxRow(x1=2496, y1=1609, x2=2769, y2=1882, cls_id=2, cls_name='left costophrenic angle')",
+      "BoxRow(x1=1637, y1=914, x2=2087, y2=1337, cls_id=3, cls_name='left hilar structures')",
+      "BoxRow(x1=1650, y1=1282, x2=2633, y2=1814, cls_id=4, cls_name='left lower lung zone')",
+      "BoxRow(x1=1637, y1=341, x2=2633, y2=1814, cls_id=5, cls_name='left lung')",
+      "BoxRow(x1=1637, y1=982, x2=2551, y2=1282, cls_id=6, cls_name='left mid lung zone')",
+      "BoxRow(x1=1664, y1=395, x2=2483, y2=982, cls_id=7, cls_name='left upper lung zone')",
+      "BoxRow(x1=231, y1=177, x2=1432, y2=750, cls_id=8, cls_name='right clavicle')",
+      "BoxRow(x1=354, y1=1364, x2=627, y2=1637, cls_id=9, cls_name='right costophrenic angle')",
+      "BoxRow(x1=995, y1=941, x2=1446, y2=1200, cls_id=10, cls_name='right hilar structures')",
+      "BoxRow(x1=491, y1=1173, x2=1418, y2=1528, cls_id=11, cls_name='right lower lung zone')",
+      "BoxRow(x1=491, y1=313, x2=1487, y2=1528, cls_id=12, cls_name='right lung')",
+      "BoxRow(x1=573, y1=982, x2=1418, y2=1173, cls_id=13, cls_name='right mid lung zone')",
+      "BoxRow(x1=654, y1=382, x2=1487, y2=982, cls_id=14, cls_name='right upper lung zone')",
+      "BoxRow(x1=1377, y1=68, x2=1759, y2=1282, cls_id=15, cls_name='trachea')",
+      "BoxRow(x1=1255, y1=504, x2=1950, y2=1132, cls_id=16, cls_name='upper mediastinum')"
+    ],
+    "image": {
+      "_tensor_info": {
+        "shape": [
+          1,
+          224,
+          224
+        ],
+        "dtype": "torch.float32",
+        "numel": 50176,
+        "sample_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "dicom_id": "fd80c024-cf4de699-31dcb2cf-63e31a39-491a6f2b",
+    "transcript": {
+      "text": "low lung volumes limiting the examination and accentuate the heart. elevated right lung base. patchy and streaky opacities of both bases. probably represent atelectasis. suspect small right effusion. couple nodular opacities are present in the left mid lung.",
+      "segments": [
+        {
+          "begin": 1.1,
+          "end": 2.3,
+          "text": "low lung volumes"
+        },
+        {
+          "begin": 2.3,
+          "end": 3.4,
+          "text": "limiting the"
+        },
+        {
+          "begin": 3.4,
+          "end": 4.3,
+          "text": "examination"
+        },
+        {
+          "begin": 4.3,
+          "end": 4.5,
+          "text": "and"
+        },
+        {
+          "begin": 4.5,
+          "end": 5.1,
+          "text": "accentuate"
+        },
+        {
+          "begin": 5.1,
+          "end": 5.2,
+          "text": "the"
+        },
+        {
+          "begin": 5.2,
+          "end": 5.6,
+          "text": "heart."
+        },
+        {
+          "begin": 5.6,
+          "end": 6.8,
+          "text": "elevated"
+        },
+        {
+          "begin": 6.8,
+          "end": 7.0,
+          "text": "right"
+        },
+        {
+          "begin": 7.0,
+          "end": 7.1,
+          "text": "lung"
+        },
+        {
+          "begin": 7.1,
+          "end": 7.3,
+          "text": "base."
+        },
+        {
+          "begin": 7.3,
+          "end": 8.5,
+          "text": "patchy"
+        },
+        {
+          "begin": 8.5,
+          "end": 8.7,
+          "text": "and"
+        },
+        {
+          "begin": 8.7,
+          "end": 9.1,
+          "text": "streaky"
+        },
+        {
+          "begin": 9.1,
+          "end": 9.1,
+          "text": "opacities"
+        },
+        {
+          "begin": 9.1,
+          "end": 9.8,
+          "text": "of"
+        },
+        {
+          "begin": 9.8,
+          "end": 10.0,
+          "text": "both"
+        },
+        {
+          "begin": 10.0,
+          "end": 10.5,
+          "text": "bases."
+        },
+        {
+          "begin": 10.5,
+          "end": 11.0,
+          "text": "probably"
+        },
+        {
+          "begin": 11.0,
+          "end": 11.7,
+          "text": "represent"
+        },
+        {
+          "begin": 11.7,
+          "end": 13.0,
+          "text": "atelectasis."
+        },
+        {
+          "begin": 15.3,
+          "end": 16.0,
+          "text": "suspect"
+        },
+        {
+          "begin": 16.0,
+          "end": 16.4,
+          "text": "small"
+        },
+        {
+          "begin": 16.4,
+          "end": 16.6,
+          "text": "right"
+        },
+        {
+          "begin": 16.6,
+          "end": 16.8,
+          "text": "effusion."
+        },
+        {
+          "begin": 18.6,
+          "end": 19.2,
+          "text": "couple"
+        },
+        {
+          "begin": 19.2,
+          "end": 20.6,
+          "text": "nodular"
+        },
+        {
+          "begin": 20.6,
+          "end": 21.3,
+          "text": "opacities"
+        },
+        {
+          "begin": 21.3,
+          "end": 21.4,
+          "text": "are"
+        },
+        {
+          "begin": 21.4,
+          "end": 21.7,
+          "text": "present"
+        },
+        {
+          "begin": 21.7,
+          "end": 21.8,
+          "text": "in"
+        },
+        {
+          "begin": 21.8,
+          "end": 21.9,
+          "text": "the"
+        },
+        {
+          "begin": 21.9,
+          "end": 22.2,
+          "text": "left"
+        },
+        {
+          "begin": 22.2,
+          "end": 22.3,
+          "text": "mid"
+        },
+        {
+          "begin": 22.3,
+          "end": 22.4,
+          "text": "lung."
+        }
+      ]
+    }
+  }
+}

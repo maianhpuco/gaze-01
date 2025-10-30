@@ -32,3 +32,42 @@ train_all:
 
 # Experiment with disabled components
 	# python main_st01_prtr_img_bs_gaze_text.py --config configs/st01_prtr_img_bs_gaze_text.yaml --no-text --no-gaze
+
+
+	# Submit full multimodal training
+# sbatch sbatch_files/train_st01_img_bs_gaze_text.sbatch
+
+# # Submit gaze-only training for baseline
+# sbatch sbatch_files/train_st01_gaze_only.sbatch
+
+# # Submit without images (since DICOM files aren't available)
+# sbatch sbatch_files/train_st01_bbox_seg_gaze_text.sbatch 
+
+# Quick test (1 epoch) - 2 hours
+
+seq:
+	sbatch sbatch_files/sbatch_sigma_seq_001_eps.sbatch
+	sbatch sbatch_files/sbatch_sigma_seq_010_eps.sbatch
+	sbatch sbatch_files/sbatch_sigma_seq_020_eps.sbatch
+	sbatch sbatch_files/sbatch_sigma_seq_100_eps.sbatch 
+
+
+dicom: 
+	sbatch sbatch_files/sbatch_st01_img_dicom_001_eps.sbatch
+	sbatch sbatch_files/sbatch_st01_img_dicom_010_eps.sbatch
+	sbatch sbatch_files/sbatch_st01_img_dicom_020_eps.sbatch
+	sbatch sbatch_files/sbatch_st01_img_dicom_100_eps.sbatch 
+	sbatch sbatch_files/sbatch_st01_img_dicom_200_eps.sbatch 
+
+check_data:
+	python main_dataset.py --config configs/data_egd_cxr_single_label.yaml --save-json 
+
+
+
+# export TORCHXRV_CACHE=/project/hnguyen2/mvu9/.cache/torchxrayvision
+# export HF_HOME=/project/hnguyen2/mvu9/.cache/huggingface
+
+
+train_full_adv:
+	python main_train.py --config configs/st_tmrnn.yaml 
+

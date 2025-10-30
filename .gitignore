@@ -19,3 +19,6 @@ dist/
 *.ckpt
 *.pth
 *.pt
+/backup
+/backup_newer
+/runs

@@ -1,0 +1,9 @@
+Starting training at: Thu Oct 30 03:10:19 AM CDT 2025
+[INFO] Using config file: configs_tmrnn_v2/st_tmrnn_nogaze.yaml
+[INFO] Config directory: /project/hnguyen2/mvu9/folder_04_ma/gaze-01/configs_tmrnn_v2
+[INFO] Split dir resolved to: /project/hnguyen2/mvu9/folder_04_ma/gaze-01/configs/splits
+[INFO] Looking for split: train at /project/hnguyen2/mvu9/folder_04_ma/gaze-01/configs/splits/train_ids.txt
+[INFO] Looking for split: val at /project/hnguyen2/mvu9/folder_04_ma/gaze-01/configs/splits/val_ids.txt
+[INFO] Looking for split: test at /project/hnguyen2/mvu9/folder_04_ma/gaze-01/configs/splits/test_ids.txt
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17

@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Dict, Any, Optional, Tuple, List
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from transformers import T5ForConditionalGeneration, T5Tokenizer
+from transformers.modeling_outputs import BaseModelOutput
+import torchxrayvision as xrv
+
+import re
+from collections import Counter
+
+def build_vocabulary(dataset, min_freq: int = 2):
+    vocab, counter = Vocabulary(), Counter()
+    for item in dataset:
+        tr = item.get('transcript', {})
+        text = tr.get('text', '') if isinstance(tr, dict) else ''
+        counter.update(vocab.tokenize(text))
+    for w, f in counter.items():
+        if f >= min_freq:
+            vocab.add_word(w)
+    return vocab
+
+class Vocabulary:
+    def __init__(self):
+        self.word2idx = {"<PAD>": 0, "<BOS>": 1, "<EOS>": 2, "<UNK>": 3}
+        self.idx2word = {idx: word for word, idx in self.word2idx.items()}
+        self.size = 4
+    def add_word(self, word: str):
+        if word not in self.word2idx:
+            idx = self.size
+            self.word2idx[word] = idx
+            self.idx2word[idx] = word
+            self.size += 1
+    def __len__(self):
+        return self.size
+    def tokenize(self, text: str):
+        return re.findall(r"\w+|[^\w\s]", text.lower(), re.UNICODE)
+
+def encode_with_tau(transcripts, vocab, max_len, device):
+    encoded = []
+    for tr in transcripts:
+        text = tr.get('text', '') if isinstance(tr, dict) else ''
+        tokens = vocab.tokenize(text)
+        ids = [vocab.word2idx.get(t, vocab.word2idx["<UNK>"]) for t in tokens]
+        ids = [vocab.word2idx["<BOS>"]] + ids + [vocab.word2idx["<EOS>"]]
+        ids = ids[:max_len] if len(ids) > max_len else ids + [vocab.word2idx["<PAD>"]] * (max_len - len(ids))
+        encoded.append(torch.tensor(ids, dtype=torch.long, device=device))
+    return torch.stack(encoded), None
+
+
+class GazeMLP(nn.Module):
+    """φ_g([x, y, Δt]) → ℝ^{d_g}."""
+    def __init__(self, d_g: int):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(3, d_g * 2), nn.ReLU(),
+            nn.Linear(d_g * 2, d_g), nn.ReLU(),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
+class ROILinear(nn.Module):
+    """W_r · roi_hits_t (multi‑hot of seg+box)."""
+    def __init__(self, r_dim: int, d_r: int):
+        super().__init__()
+        self.proj = nn.Linear(r_dim, d_r)
+
+    def forward(self, roi: torch.Tensor) -> torch.Tensor:
+        return self.proj(roi)
+
+
+class CXRDenseNet121(nn.Module):
+    """TorchXRayVision DenseNet‑121, CheXpert/MIMIC pretrained → 1024‑d features."""
+    def __init__(self):
+        super().__init__()
+        self.backbone = xrv.models.DenseNet(weights="densenet121-res224-all")
+        self.backbone.classifier = nn.Identity()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        feats = self.backbone.features(x)
+        if feats.ndim == 4:
+            feats = F.adaptive_avg_pool2d(feats, 1).flatten(1)
+        return feats  # [B,1024]
+
+
+class TMRNN(nn.Module):
+    """
+    Temporal Multimodal RNN for EGD‑CXR with multitask learning (classification + transcript).
+
+    Encoder: GRU over s_t = concat(φ_g([x,y,Δt]), W_r·roi_hits, v_img_proj)
+    Decoder: T5 (conditional generation) attending over projected GRU states.
+    """
+    def __init__(
+        self,
+        num_seg: int,
+        num_box: int,
+        num_classes: int = 3,
+        d_g: int = 64,
+        d_r: int = 64,
+        d_img: int = 128,
+        d_h: int = 256,
+        t5_name: str = "google-t5/t5-base",
+        freeze_t5: bool = True,
+        use_attn_pool: bool = False,
+    ):
+        super().__init__()
+        self.num_classes = num_classes
+        self.use_attn_pool = use_attn_pool
+
+        # Image encoder (CXR‑specific) → project to d_img
+        self.img_enc = CXRDenseNet121()            # [B,1024]
+        self.img_proj = nn.Linear(1024, d_img)     # [B,d_img]
+
+        # Gaze & ROI
+        self.gaze = GazeMLP(d_g)
+        self.roi = ROILinear(num_seg + num_box, d_r)
+
+        # RNN over time
+        self.enc_rnn = nn.GRU(d_g + d_r + d_img, d_h, batch_first=True)
+
+        # Classification head (optionally attention‑pooled over time)
+        if use_attn_pool:
+            self.attn = nn.Linear(d_h, 1)
+        self.cls = nn.Linear(d_h, num_classes)
+
+        # T5 text (encoder‑decoder)
+        self.tok = T5Tokenizer.from_pretrained(t5_name)
+        self.t5 = T5ForConditionalGeneration.from_pretrained(t5_name)
+        if freeze_t5:
+            for p in self.t5.parameters():
+                p.requires_grad = False
+
+        # Map GRU states → T5 hidden size (base=768)
+        self.to_t5 = nn.Linear(d_h, self.t5.config.d_model)
+
+    @staticmethod
+    def _delta_t(times: torch.Tensor) -> torch.Tensor:
+        dt = torch.diff(times, dim=1, prepend=torch.zeros_like(times[:, :1]))
+        return torch.clamp(dt, min=0.0).unsqueeze(-1)
+
+    def forward(
+        self,
+        batch: Dict[str, Any],
+        transcripts_ids: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        images = batch["images"]
+        fix = batch["fixations"]
+        xy = fix["xy_norm"]                 # [B,T,2] normalized to [0,1]
+        times = fix["time"]                  # [B,T]
+        seg_hits = fix["seg_hits"]           # [B,T,S]
+        box_hits = fix["box_hits"]           # [B,T,B]
+        lengths = fix["lengths"]             # [B]
+
+        B, T, _ = xy.shape
+        device = images.device
+
+        # g_t
+        dt = self._delta_t(times)
+        g_in = torch.cat([xy, dt], dim=-1)          # [B,T,3]
+        g = self.gaze(g_in.view(B * T, -1)).view(B, T, -1)
+
+        # r_t
+        roi_cat = torch.cat([seg_hits, box_hits], dim=-1)
+        r = self.roi(roi_cat.view(B * T, -1)).view(B, T, -1)
+
+        # img_t (shared per time)
+        img_feat = self.img_enc(images)
+        img_vec = self.img_proj(img_feat)
+        img_t = img_vec.unsqueeze(1).expand(B, T, -1)
+
+        # s_t and RNN
+        s_t = torch.cat([g, r, img_t], dim=-1)
+        packed = pack_padded_sequence(s_t, lengths.cpu(), batch_first=True, enforce_sorted=False)
+        packed_out, h_n = self.enc_rnn(packed)
+        h_seq, _ = pad_packed_sequence(packed_out, batch_first=True)  # [B,T,d_h]
+        last_h = h_n.squeeze(0)  # [B,d_h]
+
+        # classification
+        if self.use_attn_pool:
+            mask = torch.arange(T, device=device)[None, :] < lengths[:, None]
+            scores = self.attn(h_seq).squeeze(-1)
+            scores = scores.masked_fill(~mask, float('-inf'))
+            w = torch.softmax(scores, dim=1).unsqueeze(-1)
+            pooled = (h_seq * w).sum(dim=1)
+        else:
+            pooled = last_h
+        cls_logits = self.cls(pooled)
+
+        # text (teacher forcing if transcripts_ids provided)
+        txt_logits = None
+        if transcripts_ids is not None:
+            enc_states = self.to_t5(h_seq)
+            enc_out = BaseModelOutput(last_hidden_state=enc_states)
+            out = self.t5(
+                encoder_outputs=enc_out,
+                labels=transcripts_ids,
+            )
+            txt_logits = out.logits
+
+        return cls_logits, txt_logits
+
+    @torch.no_grad()
+    def generate(self, batch: Dict[str, Any], max_new_tokens: int = 64, num_beams: int = 3) -> List[str]:
+        self.eval()
+        images = batch["images"]
+        fix = batch["fixations"]
+        xy = fix["xy_norm"]
+        times = fix["time"]
+        seg_hits = fix["seg_hits"]
+        box_hits = fix["box_hits"]
+        lengths = fix["lengths"]
+
+        B, T, _ = xy.shape
+        device = images.device
+
+        dt = self._delta_t(times)
+        g_in = torch.cat([xy, dt], dim=-1)
+        g = self.gaze(g_in.view(B * T, -1)).view(B, T, -1)
+        roi_cat = torch.cat([seg_hits, box_hits], dim=-1)
+        r = self.roi(roi_cat.view(B * T, -1)).view(B, T, -1)
+        img_vec = self.img_proj(self.img_enc(images)).unsqueeze(1).expand(B, T, -1)
+        s_t = torch.cat([g, r, img_vec], dim=-1)
+
+        packed = pack_padded_sequence(s_t, lengths.cpu(), batch_first=True, enforce_sorted=False)
+        packed_out, _ = self.enc_rnn(packed)
+        h_seq, _ = pad_packed_sequence(packed_out, batch_first=True)
+
+        enc_states = self.to_t5(h_seq)
+        enc_out = BaseModelOutput(last_hidden_state=enc_states)
+
+        gen_ids = self.t5.generate(
+            encoder_outputs=enc_out,
+            max_new_tokens=max_new_tokens,
+            num_beams=num_beams,
+            early_stopping=True,
+        )
+        return self.tok.batch_decode(gen_ids, skip_special_tokens=True)
+
+

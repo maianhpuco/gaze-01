@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_cnn.py", line 18, in <module>
+    from egd_cxr_dataset.datasets.egd_cxr import EGDCXRDataset
+ModuleNotFoundError: No module named 'egd_cxr_dataset'
+srun: error: compute-0-8: task 0: Exited with exit code 1

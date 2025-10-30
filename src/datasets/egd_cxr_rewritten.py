@@ -214,111 +214,30 @@ class EGDCXRRewrittenDataset(Dataset):
         dicom_id = row["dicom_id"]
         target = self._targets[index]
         
-        # Load segmentation masks first to get dimensions
+        # Load segmentation masks first to get dimensions and presence vector
         segments = self._load_segmentation(dicom_id)
         num_segments = segments.shape[0]
-        
-        # Load bounding boxes and create onehot encoding
-        box_masks = self._load_bounding_box_masks(dicom_id)
-        num_box_classes = box_masks.shape[0]
-        
-        # Load fixation data
-        fixations = self._load_fixation_data(dicom_id)
-        
-        # Compute gaze-to-segment mapping following reference implementation
-        T = fixations["xy"].shape[0]  # Number of fixations
-        seg_hits = torch.zeros((T, num_segments), dtype=torch.float32)
-        
-        if num_segments > 0 and T > 0:
-            # Get fixation coordinates
-            xy_px = fixations["xy"].numpy()
-            height, width = DEFAULT_IMAGE_SIZE
-            
-            # Round coordinates and clip to image bounds
-            xs = np.clip(np.round(xy_px[:, 0]).astype(int), 0, width - 1)
-            ys = np.clip(np.round(xy_px[:, 1]).astype(int), 0, height - 1)
-            
-            # Check which segments contain each fixation point
+        if num_segments > 0:
             segments_np = segments.numpy()
-            hits = segments_np[:, ys, xs] > 0
-            seg_hits = torch.from_numpy(hits.T.astype(np.float32))
+            segment_presence = torch.from_numpy(
+                (segments_np.reshape(num_segments, -1).sum(axis=1) > 0).astype(np.float32)
+            )
+        else:
+            segments_np = np.zeros((0, *DEFAULT_IMAGE_SIZE), dtype=np.float32)
+            segment_presence = torch.zeros(0, dtype=torch.float32)
         
-        # Compute gaze-to-box mapping following reference implementation
-        box_hits = torch.zeros((T, num_box_classes), dtype=torch.float32)
-        
-        if num_box_classes > 0 and T > 0:
-            xy_px = fixations["xy"].numpy()
-            xs_int = np.clip(np.round(xy_px[:, 0]).astype(int), 0, DEFAULT_IMAGE_SIZE[0] - 1)
-            ys_int = np.clip(np.round(xy_px[:, 1]).astype(int), 0, DEFAULT_IMAGE_SIZE[1] - 1)
-            
-            for t in range(T):
-                x = int(xs_int[t])
-                y = int(ys_int[t])
-                # Check if fixation point is inside any bounding box
-                for cls_id in range(num_box_classes):
-                    if box_masks[cls_id, y, x] > 0:
-                        box_hits[t, cls_id] = 1.0
-        
-        # Update fixation data with computed mappings
-        fixations["seg_hits"] = seg_hits
-        fixations["box_hits"] = box_hits
-        
-        # Load image (optional)
-        try:
-            image = self._load_image(dicom_id)
-        except FileNotFoundError:
-            # Create a dummy image if DICOM files are not available
-            image = torch.zeros(1, DEFAULT_IMAGE_SIZE[0], DEFAULT_IMAGE_SIZE[1], dtype=torch.float32)
-        
-        # Load transcript
-        transcript = self._load_transcript(dicom_id)
-        
-        # Create classification label
-        classification = ClassificationLabel(
-            index=target,
-            name=self.classes[target],
-            classes=self.classes
-        )
-        
-        return {
-            "dicom_id": dicom_id,
-            "image": image,
-            "fixations": fixations,
-            "segments": segments,
-            "box_masks": box_masks,
-            "transcript": transcript,
-            "labels": {
-                "classification": {
-                    "index": classification.index,
-                    "name": classification.name,
-                    "classes": classification.classes,
-                    "one_hot": classification.one_hot(),
-                    "ambiguous": classification.ambiguous,
-                    "per_class": {cls: 1 if i == target else 0 for i, cls in enumerate(self.classes)},
-                    "positives": [classification.name] if classification.index >= 0 else [],
-                },
-                "single_index": torch.tensor(target, dtype=torch.long),
-                "single_name": classification.name,
-                "single_class_names": self.classes,
-            }
-        }
+        # Load bounding boxes and derive presence vector
+        box_masks = self._load_bounding_box_masks(dicomu_id:=dicom_id)  # retains compatibility
 
     def _load_fixation_data(self, dicom_id: str) -> Dict[str, torch.Tensor]:
         """Load and preprocess fixation data following the reference implementation."""
         case_fixations = self.fixations_df[self.fixations_df["DICOM_ID"] == dicom_id].copy()
         
         if case_fixations.empty:
-            # Return empty tensors if no fixations
-            empty_tensor = torch.zeros((0, 2), dtype=torch.float32)
             return {
-                "xy": empty_tensor,
-                "xy_resized": empty_tensor,
-                "xy_norm": empty_tensor,
-                "dwell": torch.zeros(0, dtype=torch.float32),
-                "duration": torch.zeros(0, dtype=torch.float32),
+                "xy": torch.zeros((0, 2), dtype=torch.float32),
                 "time": torch.zeros(0, dtype=torch.float32),
-                "seg_hits": torch.zeros(0, dtype=torch.long),
-                "box_hits": torch.zeros(0, dtype=torch.long),
+                "dwell": torch.zeros(0, dtype=torch.float32),
             }
         
         # Filter valid fixations (coordinates in bounds, positive duration) - following reference
@@ -330,17 +249,10 @@ class EGDCXRRewrittenDataset(Dataset):
         ].copy()
         
         if case_fixations.empty:
-            # Return empty tensors if no valid fixations
-            empty_tensor = torch.zeros((0, 2), dtype=torch.float32)
             return {
-                "xy": empty_tensor,
-                "xy_resized": empty_tensor,
-                "xy_norm": empty_tensor,
-                "dwell": torch.zeros(0, dtype=torch.float32),
-                "duration": torch.zeros(0, dtype=torch.float32),
+                "xy": torch.zeros((0, 2), dtype=torch.float32),
                 "time": torch.zeros(0, dtype=torch.float32),
-                "seg_hits": torch.zeros(0, dtype=torch.long),
-                "box_hits": torch.zeros(0, dtype=torch.long),
+                "dwell": torch.zeros(0, dtype=torch.float32),
             }
         
         # Sort by timestamp and counter for consistent ordering - following reference
@@ -366,26 +278,10 @@ class EGDCXRRewrittenDataset(Dataset):
             ], axis=1).astype(np.float32)
         
         # Convert to tensors
-        xy = torch.from_numpy(xy_px.astype(np.float32))
-        xy_resized = xy  # Already in pixel coordinates
-        xy_norm_tensor = torch.from_numpy(xy_norm.astype(np.float32))
-        dwell_tensor = torch.from_numpy(dwell.astype(np.float32))
-        times_tensor = torch.from_numpy(times.astype(np.float32))
-        
-        # Create segmentation and bounding box hits (will be computed later with actual masks/boxes)
-        T = xy_px.shape[0]  # Number of fixations
-        seg_hits = torch.zeros(T, dtype=torch.long)
-        box_hits = torch.zeros(T, dtype=torch.long)
-        
         return {
-            "xy": xy,
-            "xy_resized": xy_resized,
-            "xy_norm": xy_norm_tensor,
-            "dwell": dwell_tensor,
-            "duration": dwell_tensor,  # Same as dwell for compatibility
-            "time": times_tensor,
-            "seg_hits": seg_hits,
-            "box_hits": box_hits,
+            "xy": torch.from_numpy(xy_px.astype(np.float32)),
+            "time": torch.from_numpy(times.astype(np.float32)),
+            "dwell": torch.from_numpy(dwell.astype(np.float32)),
         }
 
     def _load_image(self, dicom_id: str) -> torch.Tensor:

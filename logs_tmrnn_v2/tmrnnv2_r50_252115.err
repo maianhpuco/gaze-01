@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_v2.py", line 354, in <module>
+    main()
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_v2.py", line 323, in main
+    cfg, model.device, optimizer, train=True
+         ^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/conda_envs/wsi-agent/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1964, in __getattr__
+    raise AttributeError(
+AttributeError: 'TMRNN' object has no attribute 'device'
+srun: error: compute-0-8: task 0: Exited with exit code 1

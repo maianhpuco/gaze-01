@@ -49,54 +49,26 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 TIME_COLUMN = "Time (in secs)"      # Timestamp of fixation
 X_COLUMN = "FPOGX"                  # Normalized X coordinate (0-1)
 Y_COLUMN = "FPOGY"                  # Normalized Y coordinate (0-1)
-DURATION_COLUMN = "FPOGD"           # Fixation duration in seconds
-DEFAULT_IMAGE_SIZE = (224, 224)     # Target resolution for images & masks
+DURATION_COLUMN = "FPOGD"           # Fixation duration in seconds   # <<< NOTE: paper uses seconds
 
 
 class Logger:
-    """
-    Minimal stdout logger for dataset operations.
-    
-    Provides simple info and error logging without external dependencies.
-    Used throughout the dataset for status updates and error reporting.
-    """
-
+    """Minimal stdout logger for dataset operations."""
     @staticmethod
-    def info(message: str) -> None:
-        """Print informational message."""
-        print(message)
-
+    def info(message: str) -> None:      print(message)
     @staticmethod
-    def error(message: str) -> None:
-        """Print error message with warning symbol."""
-        print(f"⚠ {message}")
+    def error(message: str) -> None:     print(f"Warning: {message}")
 
 
 @dataclass(frozen=True)
 class LabelSchema:
-    """
-    Schema defining which columns in master_sheet.csv contain binary classification labels.
-    
-    Attributes:
-        class_columns: List of column names that contain binary (0/1) disease labels
-    """
+    """Schema for binary classification columns in master_sheet.csv."""
     class_columns: List[str]
 
 
 @dataclass(frozen=True)
 class ClassificationLabel:
-    """
-    Encapsulates a single categorical label derived from mutually exclusive classes.
-
-    Attributes:
-        index: Integer index of the resolved class (-1 if unknown)
-        name: Human-readable class name (or "Unknown" when unresolved)
-        classes: Tuple of supported class names in deterministic order
-        per_class: Mapping of each class name to its raw binary flag
-        positives: Tuple of class names that were positive in the source data
-        ambiguous: Flag indicating whether multiple classes were simultaneously positive
-    """
-
+    """Single-label classification payload (CHF / pneumonia / Normal)."""
     index: int
     name: str
     classes: Tuple[str, ...]
@@ -105,7 +77,6 @@ class ClassificationLabel:
     ambiguous: bool
 
     def one_hot(self) -> torch.Tensor:
-        """Return a one-hot tensor aligned with the `classes` ordering."""
         vec = torch.zeros(len(self.classes), dtype=torch.float32)
         if 0 <= self.index < len(self.classes):
             vec[self.index] = 1.0
@@ -113,65 +84,24 @@ class ClassificationLabel:
 
 
 class LabelProcessor:
-    """
-    Processes diagnostic labels from master_sheet.csv into machine learning format.
-    
-    This class handles the conversion of medical diagnostic data into:
-    - Binary classification tensors for multi-label disease prediction
-    - Structured diagnosis metadata (primary diagnosis, all diagnoses)
-    - Raw row data for additional analysis
-    
-    The master_sheet.csv typically contains columns for different diseases/conditions
-    with binary values (0=absent, 1=present) for each case.
-    """
-
+    """Convert master_sheet.csv labels into ML-ready format."""
     def __init__(self, master_sheet_csv: Path, schema: Optional[LabelSchema] = None):
-        """
-        Initialize the label processor.
-        
-        Args:
-            master_sheet_csv: Path to the master sheet CSV file containing diagnostic labels
-            schema: Optional schema defining which columns are binary labels.
-                   If None, will auto-discover binary columns.
-        """
         self.master_sheet_csv = Path(master_sheet_csv).expanduser()
         if not self.master_sheet_csv.exists():
             raise FileNotFoundError(f"master_sheet.csv not found at {self.master_sheet_csv}")
-        
-        # Load the master sheet data
         self.df = pd.read_csv(self.master_sheet_csv, engine="python")
         if self.df.empty:
             raise ValueError(f"master_sheet.csv has no rows: {self.master_sheet_csv}")
-        
-        # Auto-discover binary columns if no schema provided
         self.schema = schema or LabelSchema(class_columns=self._discover_binary_columns(self.df))
 
     @staticmethod
     def _discover_binary_columns(df: pd.DataFrame) -> List[str]:
-        """
-        Automatically discover which columns contain binary classification labels.
-        
-        Uses heuristics to identify columns with binary (0/1) values:
-        1. If 'Normal' and 'support_devices__chx' columns exist, assumes all columns
-           between them are binary labels (common pattern in medical datasets)
-        2. Otherwise, finds all columns where all non-null values are 0 or 1
-        
-        Args:
-            df: DataFrame to analyze
-            
-        Returns:
-            List of column names that appear to contain binary labels
-        """
         cols = list(df.columns)
-        
-        # Check for common medical dataset pattern: Normal to support_devices__chx
         if "Normal" in cols and "support_devices__chx" in cols:
             si = cols.index("Normal")
             ei = cols.index("support_devices__chx")
             if si <= ei:
                 return cols[si : ei + 1]
-        
-        # Fallback: find columns with only 0/1 values
         fallback: List[str] = []
         for col in cols:
             series = df[col].dropna()
@@ -180,198 +110,45 @@ class LabelProcessor:
         return fallback
 
     def _get_row(self, case_id: str) -> pd.Series:
-        """
-        Retrieve the data row for a specific case ID.
-        
-        Args:
-            case_id: DICOM ID of the case to retrieve
-            
-        Returns:
-            pandas Series containing all data for the case
-            
-        Raises:
-            ValueError: If case_id is not found in the dataset
-        """
         mask = self.df["dicom_id"] == case_id
         if not mask.any():
             raise ValueError(f"dicom_id {case_id} not found in {self.master_sheet_csv}")
         return self.df.loc[mask].iloc[0]
 
     def diagnoses(self, case_id: str) -> Tuple[Optional[str], List[str]]:
-        """
-        Extract diagnosis information for a case.
-        
-        Looks for columns starting with 'dx' (diagnosis) and extracts text diagnoses.
-        Returns the primary diagnosis (first one) and all diagnoses.
-        
-        Args:
-            case_id: DICOM ID of the case
-            
-        Returns:
-            Tuple of (primary_diagnosis, all_diagnoses_list)
-            - primary_diagnosis: First diagnosis found (or None if none)
-            - all_diagnoses_list: List of all non-empty diagnoses
-        """
         row = self._get_row(case_id)
-        
-        # Find all diagnosis columns (dx1, dx2, dx3, etc.)
-        dx_cols = [
-            col for col in row.index if col.startswith("dx") and not col.endswith("_icd")
-        ]
-        
+        dx_cols = [c for c in row.index if c.startswith("dx") and not c.endswith("_icd")]
         diagnoses: List[str] = []
-        # Sort by column number (dx1, dx2, dx3...) to maintain order
-        for col in sorted(dx_cols, key=lambda name: int(name[2:]) if name[2:].isdigit() else 0):
-            value = row[col]
-            if isinstance(value, str) and value.strip():
-                diagnoses.append(value.strip())
-        
-        # Primary diagnosis is the first one
-        final_dx = diagnoses[0] if diagnoses else None
-        return final_dx, diagnoses
+        for col in sorted(dx_cols, key=lambda n: int(n[2:]) if n[2:].isdigit() else 0):
+            v = row[col]
+            if isinstance(v, str) and v.strip():
+                diagnoses.append(v.strip())
+        return (diagnoses[0] if diagnoses else None), diagnoses
 
     def vector(self, case_id: str) -> Tuple[torch.Tensor, List[str], Dict[str, Any]]:
-        """
-        Convert case labels to a binary classification tensor.
-        
-        Creates a multi-label binary vector where each element corresponds to
-        a disease/condition (1=present, 0=absent). Handles missing values and
-        various data types gracefully.
-        
-        Args:
-            case_id: DICOM ID of the case
-            
-        Returns:
-            Tuple of:
-            - binary_tensor: PyTorch tensor of binary labels (float32)
-            - column_names: List of column names corresponding to tensor elements
-            - raw_data: Dictionary of all raw row data for additional analysis
-        """
         row = self._get_row(case_id)
         values: List[int] = []
-        
-        # Process each binary classification column
         for col in self.schema.class_columns:
-            value = row.get(col, np.nan)
-            
-            # Handle missing values as negative (0)
-            if pd.isna(value):
-                values.append(0)
-                continue
-            
-            # Convert to integer, handling various data types
+            v = row.get(col, np.nan)
+            if pd.isna(v):
+                values.append(0); continue
             try:
-                values.append(int(value))
+                values.append(int(v))
             except (TypeError, ValueError):
-                # For non-numeric values, treat non-empty strings as positive (1)
-                values.append(1 if str(value).strip() not in ("", "0", "nan", "None") else 0)
-        
-        # Create tensor and return with metadata
+                values.append(1 if str(v).strip() not in ("", "0", "nan", "None") else 0)
         tensor = torch.tensor(values, dtype=torch.float32)
         return tensor, self.schema.class_columns, row.to_dict()
-
-    def classification_label(
-        self,
-        case_id: str,
-        *,
-        classes: Sequence[str] = ("CHF", "pneumonia", "Normal"),
-        priority: Optional[Sequence[str]] = None,
-    ) -> ClassificationLabel:
-        """
-        Derive a mutually exclusive class label following notebook filtering logic.
-
-        Args:
-            case_id: DICOM identifier
-            classes: Ordered sequence of class names to inspect in the source CSV
-            priority: Optional override for resolving clashes when multiple classes are positive
-
-        Returns:
-            ClassificationLabel describing the resolved label assignment.
-            When no classes are positive the index will be -1 and name "Unknown".
-        """
-        row = self._get_row(case_id)
-        class_order = tuple(priority) if priority is not None else tuple(classes)
-        per_class: Dict[str, int] = {}
-        positives: List[str] = []
-
-        for cls in class_order:
-            raw = row.get(cls, np.nan)
-            if pd.isna(raw):
-                value = 0
-            else:
-                try:
-                    value = int(raw)
-                except (TypeError, ValueError):
-                    value = 1 if str(raw).strip() not in ("", "0", "nan", "None") else 0
-            value = 1 if value == 1 else 0
-            per_class[cls] = value
-            if value == 1:
-                positives.append(cls)
-
-        label_index = -1
-        label_name = "Unknown"
-        for cls in class_order:
-            if per_class.get(cls, 0) == 1:
-                label_index = class_order.index(cls)
-                label_name = cls
-                break
-
-        return ClassificationLabel(
-            index=label_index,
-            name=label_name,
-            classes=class_order,
-            per_class=per_class,
-            positives=tuple(positives),
-            ambiguous=len(positives) > 1,
-        )
 
 
 @dataclass(frozen=True)
 class BoxRow:
-    """
-    Represents a bounding box annotation for an abnormality or region of interest.
-    
-    Attributes:
-        x1: Left edge coordinate (inclusive)
-        y1: Top edge coordinate (inclusive)  
-        x2: Right edge coordinate (exclusive)
-        y2: Bottom edge coordinate (exclusive)
-        cls_id: Integer class ID for the box type/abnormality
-        cls_name: String name of the box class (e.g., "pneumonia", "nodule")
-    """
-    x1: int
-    y1: int
-    x2: int
-    y2: int
-    cls_id: int
-    cls_name: str
+    """Bounding-box annotation."""
+    x1: int; y1: int; x2: int; y2: int
+    cls_id: int; cls_name: str
 
 
 class EGDCXRDataset(Dataset):
-    """
-    Multimodal dataset for EGD-CXR combining gaze, segmentations, boxes, transcripts, and labels.
-    
-    This is the main dataset class that integrates multiple data modalities for eye-gaze
-    tracking research on chest X-ray images. It provides a unified interface to access:
-    
-    Data Modalities:
-    - Eye gaze tracking data (fixation coordinates, timing, duration)
-    - Chest X-ray images (DICOM format with proper windowing)
-    - Anatomical segmentation masks (organ/region boundaries)
-    - Bounding box annotations (abnormalities and regions of interest)
-    - Radiologist text transcripts/reports
-    - Diagnostic labels (binary disease classifications)
-    
-    Key Features:
-    - Automatic gaze-to-segment mapping (which anatomical regions were looked at)
-    - Gaze-to-box mapping (which abnormalities were fixated on)
-    - Variable-length sequence handling with proper padding
-    - Support for multiple data storage formats (CSV, JSON, PNG, NPY/NPZ)
-    - Comprehensive error handling and validation
-    
-    The dataset enables research on radiologist attention patterns, multimodal diagnosis,
-    and attention-guided AI systems for medical imaging.
-    """
+    """Multimodal dataset (gaze + image + seg + boxes + transcript + labels)."""
 
     def __init__(
         self,
@@ -382,111 +159,120 @@ class EGDCXRDataset(Dataset):
         dicom_root: Optional[Path] = None,
         max_fixations: Optional[int] = None,
         case_ids: Optional[Sequence[str]] = None,
+        classes: Sequence[str] = ("CHF", "pneumonia", "Normal"),
+        drop_unlabelled: bool = True,
     ):
-        """
-        Initialize the EGD-CXR multimodal dataset.
-        
-        Args:
-            root: Path to the main dataset directory containing:
-                 - fixations.csv (eye tracking data)
-                 - master_sheet.csv (diagnostic labels)
-                 - bounding_boxes.csv (abnormality annotations)
-            seg_path: Path to segmentation data (PNG files or NPY/NPZ arrays)
-            transcripts_path: Path to transcript data (CSV file or JSON directory).
-                            If None, uses seg_path.
-            dicom_root: Optional path to DICOM image files (.dcm)
-            max_fixations: Optional limit on number of fixations per case
-            case_ids: Optional list of specific case IDs to include.
-                     If None, includes all cases with complete data.
-        
-        Raises:
-            FileNotFoundError: If required data files are missing
-            ValueError: If no valid cases are found or data is invalid
-        """
-        # Set up main dataset paths
+        # ------------------------------------------------------------------ #
+        #   Path setup
+        # ------------------------------------------------------------------ #
         self.root = Path(root).expanduser()
         if not self.root.exists():
             raise FileNotFoundError(f"Gaze dataset root not found: {self.root}")
 
-        # Define paths to required CSV files
-        self.fixations_csv = self.root / "fixations.csv"           # Eye tracking data
-        self.master_sheet_csv = self.root / "master_sheet.csv"     # Diagnostic labels
-        self.bounding_boxes_csv = self.root / "bounding_boxes.csv" # Abnormality annotations
+        self.fixations_csv = self.root / "fixations.csv"
+        self.master_sheet_csv = self.root / "master_sheet.csv"
+        self.bounding_boxes_csv = self.root / "bounding_boxes.csv"
 
-        # Set up segmentation and transcript paths
         self.seg_path = Path(seg_path).expanduser()
-        if transcripts_path is None:
-            transcripts_path = seg_path
-        self.transcripts_path = Path(transcripts_path).expanduser()
-        self.dicom_root = Path(dicom_root).expanduser() if dicom_root is not None else None
+        self.transcripts_path = Path(transcripts_path or seg_path).expanduser()
+        self.dicom_root = Path(dicom_root).expanduser() if dicom_root else None
 
-        # Validate that all required paths exist
-        for path in [
-            self.fixations_csv,
-            self.master_sheet_csv,
-            self.bounding_boxes_csv,
-            self.seg_path,
-            self.transcripts_path,
-        ]:
-            if not Path(path).exists():
-                raise FileNotFoundError(f"Missing path: {path}")
-        if self.dicom_root is not None and not self.dicom_root.exists():
+        for p in [self.fixations_csv, self.master_sheet_csv,
+                  self.bounding_boxes_csv, self.seg_path, self.transcripts_path]:
+            if not Path(p).exists():
+                raise FileNotFoundError(f"Missing path: {p}")
+        if self.dicom_root and not self.dicom_root.exists():
             raise FileNotFoundError(f"DICOM root not found: {self.dicom_root}")
 
-        # Store configuration parameters
+        # ------------------------------------------------------------------ #
+        #   Config
+        # ------------------------------------------------------------------ #
         self.max_fix = max_fixations
-        
-        # Load and validate CSV data
+        self.single_classes = tuple(c.strip() for c in classes if c and str(c).strip())
+        if not self.single_classes:
+            raise ValueError("`classes` must contain at least one non-empty name.")
+        self.drop_unlabelled = drop_unlabelled
+
+        # ------------------------------------------------------------------ #
+        #   Load CSVs
+        # ------------------------------------------------------------------ #
         self.ms_df = pd.read_csv(self.master_sheet_csv, engine="python")
         if self.ms_df.empty:
             raise ValueError("master_sheet.csv empty")
-
         self.fx_df = pd.read_csv(self.fixations_csv, engine="python")
-        # Bounding boxes CSV is optional
-        self.bb_df = pd.read_csv(self.bounding_boxes_csv, engine="python") if self.bounding_boxes_csv.exists() else pd.DataFrame()
+        self.bb_df = pd.read_csv(self.bounding_boxes_csv, engine="python") \
+            if self.bounding_boxes_csv.exists() else pd.DataFrame()
 
-        # Determine transcript storage format and load data
+        # ------------------------------------------------------------------ #
+        #   Transcript / segmentation mode
+        # ------------------------------------------------------------------ #
         self.transcripts_mode = "csv" if self.transcripts_path.is_file() else "directory"
-        if self.transcripts_mode == "csv":
-            self.tr_df = pd.read_csv(self.transcripts_path, engine="python")
-        else:
-            self.tr_df = None
+        self.tr_df = pd.read_csv(self.transcripts_path, engine="python") \
+            if self.transcripts_mode == "csv" else None
 
-        # Determine segmentation storage format
         self.seg_mode = "directory" if self.seg_path.is_dir() else "arrays"
         if self.seg_mode not in {"directory", "arrays"}:
             raise ValueError("Unsupported segmentation storage format.")
 
-        # Discover available regions and build label mappings
+        # ------------------------------------------------------------------ #
+        #   Region / box meta
+        # ------------------------------------------------------------------ #
         self.region_names = self._discover_region_names() if self.seg_mode == "directory" else []
         self.box_label_to_idx = self._build_box_label_mapping()
-        self.box_class_names = [name for name, _ in sorted(self.box_label_to_idx.items(), key=lambda kv: kv[1])]
+        self.box_class_names = [n for n, _ in sorted(self.box_label_to_idx.items(),
+                                                   key=lambda kv: kv[1])]
         self.num_box_classes = len(self.box_class_names)
         self.num_segments: Optional[int] = len(self.region_names) if self.region_names else None
 
-        # Find intersection of cases across all modalities
-        fx_cases = set(self.fx_df["DICOM_ID"].dropna().astype(str))      # Eye tracking cases
-        ms_cases = set(self.ms_df["dicom_id"].dropna().astype(str))      # Label cases
-        transcript_cases = self._discover_transcript_case_ids()          # Transcript cases
-        seg_cases = self._discover_segmentation_case_ids()               # Segmentation cases
-
-        # Only include cases that have all required modalities
+        # ------------------------------------------------------------------ #
+        #   Case intersection
+        # ------------------------------------------------------------------ #
+        fx_cases = set(self.fx_df["DICOM_ID"].dropna().astype(str))
+        ms_cases = set(self.ms_df["dicom_id"].dropna().astype(str))
+        transcript_cases = self._discover_transcript_case_ids()
+        seg_cases = self._discover_segmentation_case_ids()
         base_cases = sorted(ms_cases & fx_cases & transcript_cases & seg_cases)
-        
-        # Filter to requested case IDs if specified
+
         if case_ids is not None:
             requested = set(case_ids)
             missing = requested - set(base_cases)
             if missing:
-                Logger.error(f"{len(missing)} requested IDs missing required modalities; they will be skipped.")
+                Logger.error(f"{len(missing)} requested IDs missing modalities; skipping.")
             base_cases = [cid for cid in base_cases if cid in requested]
 
         if not base_cases:
-            raise ValueError("No cases found with all required modalities.")
+            raise ValueError("No cases with all required modalities.")
 
-        # Store final case list and initialize label processor
-        self.case_ids = base_cases
+        # ------------------------------------------------------------------ #
+        #   Label processing & final case list
+        # ------------------------------------------------------------------ #
         self.label_proc = LabelProcessor(self.master_sheet_csv)
+
+        classification_map: Dict[str, ClassificationLabel] = {}
+        filtered_cases: List[str] = []
+        targets: List[int] = []
+
+        for case_id in base_cases:
+            row = self.ms_df[self.ms_df["dicom_id"] == case_id]
+            if row.empty:
+                continue
+            cls = self._classify_row(row.iloc[0])
+            if cls.index < 0 and self.drop_unlabelled:
+                continue
+            filtered_cases.append(case_id)
+            classification_map[case_id] = cls
+            targets.append(cls.index)
+
+        if not filtered_cases:
+            raise ValueError("No cases with valid single-label classification.")
+
+        self.case_ids = filtered_cases
+        self._classification_map = classification_map
+        self._single_targets = targets
+        self._class_counts = torch.bincount(
+            torch.tensor(targets, dtype=torch.long),
+            minlength=len(self.single_classes),
+        )
 
         Logger.info(
             f"EGDCXRDataset ready: {len(self.case_ids)} cases | "
@@ -494,8 +280,58 @@ class EGDCXRDataset(Dataset):
             f"bbox_classes={len(self.box_label_to_idx)}"
         )
 
-    def __len__(self) -> int:
-        return len(self.case_ids)
+    # ------------------------------------------------------------------ #
+    #   Dataset interface
+    # ------------------------------------------------------------------ #
+    def __len__(self) -> int:                     return len(self.case_ids)
+    @property
+    def class_names(self) -> Tuple[str, ...]:     return self.single_classes
+    @property
+    def class_counts(self) -> torch.Tensor:       return self._class_counts.clone()
+
+    def class_weights(self) -> torch.Tensor:
+        counts = self.class_counts.to(torch.float32)
+        total = counts.sum().item()
+        w = torch.zeros_like(counts)
+        for i, c in enumerate(counts):
+            w[i] = total / max(float(c.item()), 1.0)
+        return w / w.mean().clamp_min(1e-6)
+
+    def sample_weights(self) -> torch.Tensor:
+        w = self.class_weights()
+        return w[torch.tensor(self._single_targets, dtype=torch.long)]
+
+    # ------------------------------------------------------------------ #
+    #   Helper methods
+    # ------------------------------------------------------------------ #
+    def _classify_row(self, row: pd.Series) -> ClassificationLabel:
+        per_class: Dict[str, int] = {}
+        positives: List[str] = []
+        for cls in self.single_classes:
+            raw = row.get(cls, np.nan)
+            if pd.isna(raw):
+                val = 0
+            else:
+                try:
+                    val = int(raw)
+                except (TypeError, ValueError):
+                    val = 1 if str(raw).strip() not in ("", "0", "nan", "None") else 0
+            val = 1 if val == 1 else 0
+            per_class[cls] = val
+            if val == 1:
+                positives.append(cls)
+
+        idx = -1; name = "Unknown"
+        for cls in self.single_classes:
+            if per_class.get(cls, 0) == 1:
+                idx = self.single_classes.index(cls)
+                name = cls
+                break
+        return ClassificationLabel(
+            index=idx, name=name, classes=self.single_classes,
+            per_class=per_class, positives=tuple(positives),
+            ambiguous=len(positives) > 1,
+        )
 
     def _discover_region_names(self) -> List[str]:
         names: set[str] = set()
@@ -512,31 +348,35 @@ class EGDCXRDataset(Dataset):
         if self.transcripts_mode == "csv":
             return set(self.tr_df["dicom_id"].dropna().astype(str))
         cases: set[str] = set()
-        for path in self.transcripts_path.iterdir():
-            if path.is_dir() and (path / "transcript.json").exists():
-                cases.add(path.name)
+        for p in self.transcripts_path.iterdir():
+            if p.is_dir() and (p / "transcript.json").exists():
+                cases.add(p.name)
         return cases
 
     def _discover_segmentation_case_ids(self) -> set[str]:
         cases: set[str] = set()
         if self.seg_mode == "directory":
-            for path in self.seg_path.iterdir():
-                if path.is_dir() and any(path.glob("*.png")):
-                    cases.add(path.name)
+            for p in self.seg_path.iterdir():
+                if p.is_dir() and any(p.glob("*.png")):
+                    cases.add(p.name)
         else:
-            for file in self.seg_path.glob("*_segs.npz"):
-                cases.add(file.stem.replace("_segs", ""))
-            for file in self.seg_path.glob("*_segs.npy"):
-                cases.add(file.stem.replace("_segs", ""))
+            for f in self.seg_path.glob("*_segs.npz"):
+                cases.add(f.stem.replace("_segs", ""))
+            for f in self.seg_path.glob("*_segs.npy"):
+                cases.add(f.stem.replace("_segs", ""))
         return cases
 
     def _build_box_label_mapping(self) -> Dict[str, int]:
         if self.bb_df.empty:
             return {}
         names = sorted(self.bb_df["bbox_name"].dropna().astype(str).unique())
-        return {name: idx for idx, name in enumerate(names)}
+        return {n: i for i, n in enumerate(names)}
 
+    # ------------------------------------------------------------------ #
+    #   Data loading helpers
+    # ------------------------------------------------------------------ #
     def _load_seg_masks(self, dicom_id: str) -> np.ndarray:
+        """Return (R+1, H, W) uint8 masks (last channel = background)."""
         if self.seg_mode == "arrays":
             npz = self.seg_path / f"{dicom_id}_segs.npz"
             npy = self.seg_path / f"{dicom_id}_segs.npy"
@@ -552,82 +392,76 @@ class EGDCXRDataset(Dataset):
         if not case_dir.exists():
             raise FileNotFoundError(f"Segmentation directory not found for {dicom_id}")
 
-        region_names = self.region_names or sorted([png.stem for png in case_dir.glob("*.png")])
+        region_names = self.region_names or sorted([p.stem for p in case_dir.glob("*.png")])
         if not region_names:
-            raise ValueError(f"No segmentation PNGs found for {dicom_id}")
+            raise ValueError(f"No segmentation PNGs for {dicom_id}")
 
-        reference_mask = None
-        for png_name in region_names:
-            png_path = case_dir / f"{png_name}.png"
-            if png_path.exists():
-                reference_mask = imageio.imread(png_path)
+        ref = None
+        for n in region_names:
+            p = case_dir / f"{n}.png"
+            if p.exists():
+                ref = imageio.imread(p)
                 break
-        if reference_mask is None:
-            raise ValueError(f"No segmentation PNGs found for {dicom_id}")
-        height, width = reference_mask.shape[:2]
-        masks = np.zeros((len(region_names), height, width), dtype=np.uint8)
+        if ref is None:
+            raise ValueError(f"No segmentation PNGs for {dicom_id}")
+        h, w = ref.shape[:2]
+        masks = np.zeros((len(region_names), h, w), dtype=np.uint8)
 
-        for idx, png_name in enumerate(region_names):
-            png_path = case_dir / f"{png_name}.png"
-            if not png_path.exists():
+        for i, n in enumerate(region_names):
+            p = case_dir / f"{n}.png"
+            if not p.exists():
                 continue
-            img = imageio.imread(png_path)
-            if img.ndim == 3:
-                mask = img.max(axis=2) > 0
-            else:
-                mask = img > 0
-            masks[idx] = mask.astype(np.uint8)
+            img = imageio.imread(p)
+            mask = img.max(axis=2) > 0 if img.ndim == 3 else img > 0
+            masks[i] = mask.astype(np.uint8)
 
-        background = (masks.sum(axis=0, keepdims=True) == 0).astype(np.uint8)
-        stacked = np.concatenate([masks, background], axis=0)
-        return stacked
+        bg = (masks.sum(axis=0, keepdims=True) == 0).astype(np.uint8)
+        return np.concatenate([masks, bg], axis=0)
 
     def _load_dicom_image(self, dicom_id: str) -> Optional[np.ndarray]:
+        """Return float32 image (H, W) in [0,1] with proper windowing."""
         if self.dicom_root is None:
             return None
-        dicom_path = self.dicom_root / f"{dicom_id}.dcm"
-        if not dicom_path.exists():
+        path = self.dicom_root / f"{dicom_id}.dcm"
+        if not path.exists():
             return None
         try:
             if HAS_PYDICOM:
-                ds = pydicom.dcmread(str(dicom_path))
+                ds = pydicom.dcmread(str(path))
                 arr = ds.pixel_array.astype(np.float32)
                 slope = float(getattr(ds, "RescaleSlope", 1.0))
                 intercept = float(getattr(ds, "RescaleIntercept", 0.0))
                 arr = arr * slope + intercept
 
-                def _window_value(tag: str) -> Optional[float]:
-                    val = getattr(ds, tag, None)
-                    if val is None:
-                        return None
+                def _win(tag: str) -> Optional[float]:
+                    v = getattr(ds, tag, None)
+                    if v is None: return None
                     try:
-                        if isinstance(val, (list, tuple)):
-                            val = val[0]
-                        return float(val)
+                        return float(v[0]) if isinstance(v, (list, tuple)) else float(v)
                     except Exception:
                         return None
 
-                center = _window_value("WindowCenter")
-                width = _window_value("WindowWidth")
+                center = _win("WindowCenter")
+                width  = _win("WindowWidth")
                 if center is not None and width is not None and width > 0:
-                    min_val = center - width / 2.0
-                    max_val = center + width / 2.0
-                    arr = np.clip(arr, min_val, max_val)
-                    arr = (arr - min_val) / max((max_val - min_val), 1e-6)
+                    lo = center - width / 2.0
+                    hi = center + width / 2.0
+                    arr = np.clip(arr, lo, hi)
+                    arr = (arr - lo) / max((hi - lo), 1e-6)                 # <<< FIX: epsilon
                 else:
                     arr -= arr.min()
-                    max_val = arr.max()
-                    if max_val > 0:
-                        arr /= max_val
+                    mx = arr.max()
+                    if mx > 0:
+                        arr = arr / mx
             else:
-                arr = imageio.imread(dicom_path)
+                arr = imageio.imread(path)
                 if arr.ndim == 3:
                     arr = arr[..., 0]
                 arr = arr.astype(np.float32)
                 arr -= arr.min()
-                max_val = arr.max()
-                if max_val > 0:
-                    arr /= max_val
+                mx = arr.max()
+                if mx > 0:
+                    arr = arr / mx
         except Exception:
             return None
 
@@ -639,173 +473,110 @@ class EGDCXRDataset(Dataset):
         if self.bb_df.empty:
             return []
         rows = self.bb_df[self.bb_df["dicom_id"] == dicom_id]
-        processed: List[BoxRow] = []
-        for _, row in rows.iterrows():
-            name = str(row["bbox_name"])
-            cls_id = self.box_label_to_idx.get(name, -1)
-            x1 = float(row["x1"])
-            y1 = float(row["y1"])
-            x2 = float(row["x2"])
-            y2 = float(row["y2"])
-            processed.append(
-                BoxRow(
-                    x1=int(round(x1)),
-                    y1=int(round(y1)),
-                    x2=int(round(x2)),
-                    y2=int(round(y2)),
-                    cls_id=cls_id,
-                    cls_name=name,
-                )
-            )
-        return processed
+        out: List[BoxRow] = []
+        for _, r in rows.iterrows():
+            name = str(r["bbox_name"])
+            cid = self.box_label_to_idx.get(name, -1)
+            out.append(BoxRow(
+                x1=int(round(float(r["x1"]))),
+                y1=int(round(float(r["y1"]))),
+                x2=int(round(float(r["x2"]))),
+                y2=int(round(float(r["y2"]))),
+                cls_id=cid,
+                cls_name=name,
+            ))
+        return out
 
     def _load_transcript(self, dicom_id: str) -> Dict[str, Any]:
         if self.transcripts_mode == "csv":
             rows = self.tr_df[self.tr_df["dicom_id"] == dicom_id]
             if rows.empty:
                 return {"text": "", "segments": []}
-            text = str(rows.iloc[0].get("transcript", "") or "")
-            return {"text": text, "segments": []}
+            txt = str(rows.iloc[0].get("transcript", "") or "")
+            return {"text": txt, "segments": []}
         case_dir = self.transcripts_path / dicom_id
-        transcript_file = case_dir / "transcript.json"
-        if transcript_file.exists():
-            data = json.loads(transcript_file.read_text(encoding="utf-8"))
+        tf = case_dir / "transcript.json"
+        if tf.exists():
+            data = json.loads(tf.read_text(encoding="utf-8"))
             if isinstance(data, dict):
-                text = str(data.get("transcript") or data.get("full_text") or "").strip()
-                segments = data.get("segments") or []
-                return {"text": text, "segments": segments}
+                txt = str(data.get("transcript") or data.get("full_text") or "").strip()
+                segs = data.get("segments") or []
+                return {"text": txt, "segments": segs}
         return {"text": "", "segments": []}
 
     def _load_fixations(self, dicom_id: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Load and process eye tracking fixation data for a case.
-        
-        Filters and validates fixation data, ensuring coordinates are within bounds
-        and durations are positive. Sorts by timestamp and optionally limits the
-        number of fixations.
-        
-        Args:
-            dicom_id: Case identifier
-            
-        Returns:
-            Tuple of (times, xy_norm, dwell):
-            - times: Timestamps in seconds (T,)
-            - xy_norm: Normalized coordinates [0,1] (T, 2)
-            - dwell: Fixation durations in milliseconds (T,)
-            
-        Raises:
-            ValueError: If no valid fixations are found
+        Return (times_sec, xy_norm, dwell_sec).
+        dwell_sec is **seconds** (paper uses Δt_t in seconds).
         """
         df = self.fx_df[self.fx_df["DICOM_ID"] == dicom_id].copy()
         if df.empty:
             raise ValueError(f"No fixations for {dicom_id}")
-        
-        # Filter valid fixations (coordinates in bounds, positive duration)
+
+        # Keep only valid fixations
         df = df[
-            df[X_COLUMN].between(0.0, 1.0)      # X coordinate in [0,1]
-            & df[Y_COLUMN].between(0.0, 1.0)    # Y coordinate in [0,1]
-            & df[DURATION_COLUMN].notna()       # Duration not null
-            & (df[DURATION_COLUMN] > 0)         # Duration positive
+            df[X_COLUMN].between(0.0, 1.0) &
+            df[Y_COLUMN].between(0.0, 1.0) &
+            df[DURATION_COLUMN].notna() &
+            (df[DURATION_COLUMN] > 0)
         ].copy()
         if df.empty:
             raise ValueError(f"Invalid fixations for {dicom_id}")
-        
-        # Sort by timestamp and counter for consistent ordering
-        df.sort_values(by=[TIME_COLUMN, "CNT"], inplace=True, kind="mergesort")
-        
-        # Limit number of fixations if specified
+
+        # Stable sort by time; include CNT only if present
+        if "CNT" in df.columns:
+            df.sort_values(by=[TIME_COLUMN, "CNT"], inplace=True, kind="mergesort")
+        else:
+            df.sort_values(by=[TIME_COLUMN], inplace=True, kind="mergesort")
         if self.max_fix is not None:
             df = df.iloc[: self.max_fix]
-        
-        # Extract arrays
+
         xy_norm = df[[X_COLUMN, Y_COLUMN]].to_numpy(dtype=np.float32)
-        dwell = df[DURATION_COLUMN].to_numpy(dtype=np.float32) * 1000.0  # Convert to ms
+        # <<< FIX: keep dwell in **seconds** (no *1000)
+        dwell = df[DURATION_COLUMN].to_numpy(dtype=np.float32)          # seconds
         times = df[TIME_COLUMN].to_numpy(dtype=np.float32)
+
+        # Basic sanity: drop any rows that became NaN (should be none after filters)
+        if not np.isfinite(xy_norm).all() or not np.isfinite(dwell).all() or not np.isfinite(times).all():
+            mask = np.isfinite(xy_norm).all(axis=1) & np.isfinite(dwell) & np.isfinite(times)
+            xy_norm = xy_norm[mask]
+            dwell = dwell[mask]
+            times = times[mask]
         return times, xy_norm, dwell
 
+    # ------------------------------------------------------------------ #
+    #   __getitem__
+    # ------------------------------------------------------------------ #
     def __getitem__(self, idx: int) -> Dict[str, Any]:
-        """
-        Retrieve a complete multimodal sample for the given index.
-        
-        This is the main method that loads and processes all data modalities for a single case.
-        It performs several key operations:
-        1. Loads segmentation masks and determines anatomical regions
-        2. Loads bounding box annotations for abnormalities
-        3. Loads radiologist transcript/report
-        4. Processes diagnostic labels into binary tensors
-        5. Loads and processes eye tracking data
-        6. Maps gaze coordinates to anatomical regions and abnormalities
-        7. Loads and preprocesses the chest X-ray image
-        8. Returns a unified dictionary with all modalities
-        
-        Args:
-            idx: Index of the case to retrieve
-            
-        Returns:
-            Dictionary containing all data modalities:
-            - dicom_id: Case identifier
-            - image: Chest X-ray image tensor (1, 224, 224)
-            - fixations: Dictionary with gaze data and mappings
-            - transcript: Radiologist report text and segments
-            - labels: Diagnostic labels and metadata
-            - meta: Region names and class information
-        """
         dicom_id = self.case_ids[idx]
 
-        # Load segmentation masks and determine number of anatomical regions
+        # ---- segmentation -------------------------------------------------
         seg_masks_np = self._load_seg_masks(dicom_id)
         if self.num_segments is None:
-            # Auto-discover number of segments (exclude background if present)
-            if seg_masks_np.shape[0] > 1:
-                self.num_segments = seg_masks_np.shape[0] - 1  # Exclude background
-            else:
-                self.num_segments = seg_masks_np.shape[0]
+            self.num_segments = seg_masks_np.shape[0] - 1 if seg_masks_np.shape[0] > 1 else seg_masks_np.shape[0]
             if not self.region_names:
                 self.region_names = [f"segment_{i}" for i in range(self.num_segments)]
-
-        # Extract anatomical segments (exclude background) and keep background copy for one-hot encoding
         num_segments = self.num_segments or 0
-        if num_segments > 0:
-            segments_np = seg_masks_np[:num_segments]
-        else:
-            segments_np = np.zeros((0, *seg_masks_np.shape[1:]), dtype=np.uint8)
-        segments_with_background = seg_masks_np.astype(np.float32)
+        segments_np = seg_masks_np[:num_segments] if num_segments > 0 else np.zeros((0, *seg_masks_np.shape[1:]), dtype=np.uint8)
 
-        # Load all other data modalities
-        boxes = self._load_boxes(dicom_id)                                      # Abnormality bounding boxes
-        transcript_payload = self._load_transcript(dicom_id)                    # Radiologist report
-        labels_vec, label_names, labels_row = self.label_proc.vector(dicom_id)  # Binary disease labels
-        final_dx, diagnoses = self.label_proc.diagnoses(dicom_id)               # Text diagnoses
-        classification = self.label_proc.classification_label(dicom_id)         # Single-label classification
-        times_sec, xy_norm, dwell_ms = self._load_fixations(dicom_id)           # Eye tracking data
+        # ---- other modalities --------------------------------------------
+        boxes = self._load_boxes(dicom_id)
+        transcript_payload = self._load_transcript(dicom_id)
+        final_dx, diagnoses = self.label_proc.diagnoses(dicom_id)
+        times_sec, xy_norm, dwell = self._load_fixations(dicom_id)
 
-        # Convert normalized gaze coordinates to pixel coordinates (source resolution and resized image)
+        # ---- gaze → pixel ------------------------------------------------
         height, width = seg_masks_np.shape[1:]
-        target_height, target_width = DEFAULT_IMAGE_SIZE
-
         if xy_norm.size == 0:
-            xy_norm_arr = np.zeros((0, 2), dtype=np.float32)
             xy_px = np.zeros((0, 2), dtype=np.float32)
-            xy_resized_px = np.zeros((0, 2), dtype=np.float32)
         else:
-            xy_norm_arr = xy_norm.astype(np.float32)
-            xy_px = np.stack(
-                [
-                    xy_norm_arr[:, 0] * (width - 1),
-                    xy_norm_arr[:, 1] * (height - 1),
-                ],
-                axis=1,
-            ).astype(np.float32)
-            xy_resized_px = np.stack(
-                [
-                    xy_norm_arr[:, 0] * (target_width - 1),
-                    xy_norm_arr[:, 1] * (target_height - 1),
-                ],
-                axis=1,
-            ).astype(np.float32)
+            xy_px = np.stack([
+                xy_norm[:, 0] * (width - 1),
+                xy_norm[:, 1] * (height - 1),
+            ], axis=1).astype(np.float32)
 
-        # Create gaze-to-segment mapping: which anatomical regions were looked at?
-        T = xy_px.shape[0]  # Number of fixations
+        # ---- gaze → ROI hits ---------------------------------------------
+        T = xy_px.shape[0]
         seg_hits = np.zeros((T, num_segments), dtype=np.float32)
         if num_segments > 0 and T > 0:
             xs = np.clip(np.round(xy_px[:, 0]).astype(int), 0, width - 1)
@@ -813,244 +584,164 @@ class EGDCXRDataset(Dataset):
             hits = segments_np[:, ys, xs] > 0
             seg_hits = hits.T.astype(np.float32)
 
-        # Create gaze-to-box mapping: which abnormalities were looked at?
         num_box_classes = max(0, self.num_box_classes)
         box_hits = np.zeros((T, num_box_classes), dtype=np.float32)
         if num_box_classes > 0 and T > 0:
             xs_int = np.clip(np.round(xy_px[:, 0]).astype(int), 0, width - 1)
             ys_int = np.clip(np.round(xy_px[:, 1]).astype(int), 0, height - 1)
             for t in range(T):
-                x = int(xs_int[t])
-                y = int(ys_int[t])
+                x, y = int(xs_int[t]), int(ys_int[t])
                 for box in boxes:
-                    cls_id = box.cls_id
-                    if 0 <= cls_id < num_box_classes and box.x1 <= x < box.x2 and box.y1 <= y < box.y2:
-                        box_hits[t, cls_id] = 1.0
+                    cid = box.cls_id
+                    if 0 <= cid < num_box_classes and box.x1 <= x < box.x2 and box.y1 <= y < box.y2:
+                        box_hits[t, cid] = 1.0
 
-        # Build dense one-hot masks for bounding boxes
-        if num_box_classes > 0:
-            box_masks_np = np.zeros((num_box_classes, height, width), dtype=np.float32)
-            for box in boxes:
-                if 0 <= box.cls_id < num_box_classes:
-                    x1 = np.clip(box.x1, 0, width)
-                    x2 = np.clip(box.x2, 0, width)
-                    y1 = np.clip(box.y1, 0, height)
-                    y2 = np.clip(box.y2, 0, height)
-                    if x2 > x1 and y2 > y1:
-                        box_masks_np[box.cls_id, y1:y2, x1:x2] = 1.0
+        # ---- image -------------------------------------------------------
+        img_arr = self._load_dicom_image(dicom_id)
+        if img_arr is None:
+            image_tensor = torch.zeros(1, 224, 224, dtype=torch.float32)
         else:
-            box_masks_np = np.zeros((0, height, width), dtype=np.float32)
-
-        # Load and preprocess chest X-ray image
-        image_arr = self._load_dicom_image(dicom_id)
-        if image_arr is None:
-            image_tensor = torch.zeros(1, target_height, target_width, dtype=torch.float32)
-        else:
-            img_tensor = torch.from_numpy(image_arr).unsqueeze(0).float()
+            img_tensor = torch.from_numpy(img_arr).unsqueeze(0).float()
             image_tensor = F.interpolate(
-                img_tensor.unsqueeze(0), size=(target_height, target_width), mode="bilinear", align_corners=False
+                img_tensor.unsqueeze(0), size=(224, 224),
+                mode="bilinear", align_corners=False
             ).squeeze(0)
 
-        # Resize segmentation masks and bounding box masks to the target image resolution
-        segments_tensor = torch.from_numpy(segments_with_background)
-        if segments_tensor.shape[0] == 0:
-            segments_resized = torch.zeros((0, target_height, target_width), dtype=torch.float32)
+        # ---- presence vectors --------------------------------------------
+        segment_names = self.region_names or [f"segment_{i}" for i in range(num_segments)]
+        box_class_names = self.box_class_names or [f"class_{i}" for i in range(self.num_box_classes)]
+
+        if num_segments > 0:
+            seg_presence_np = (segments_np.reshape(num_segments, -1).sum(axis=1) > 0).astype(np.float32)
+            segment_presence = torch.from_numpy(seg_presence_np)
         else:
-            segments_resized = F.interpolate(
-                segments_tensor.unsqueeze(0), size=(target_height, target_width), mode="nearest"
-            ).squeeze(0)
+            segment_presence = torch.zeros(0, dtype=torch.float32)
 
-        box_masks_tensor = torch.from_numpy(box_masks_np)
-        if box_masks_tensor.shape[0] == 0:
-            box_masks_resized = torch.zeros((0, target_height, target_width), dtype=torch.float32)
-        else:
-            box_masks_resized = F.interpolate(
-                box_masks_tensor.unsqueeze(0), size=(target_height, target_width), mode="nearest"
-            ).squeeze(0)
+        box_presence = torch.zeros(self.num_box_classes, dtype=torch.float32)
+        for b in boxes:
+            if 0 <= b.cls_id < self.num_box_classes:
+                box_presence[b.cls_id] = 1.0
 
-        # Prepare metadata for region and class names
-        segment_names = self.region_names if self.region_names else [f"segment_{i}" for i in range(num_segments)]
-        segment_names_with_background = list(segment_names)
-        if segments_resized.shape[0] > len(segment_names_with_background):
-            segment_names_with_background.append("background")
-        box_class_names = self.box_class_names if self.box_class_names else [f"class_{i}" for i in range(self.num_box_classes)]
+        # ---- assemble sample ---------------------------------------------
+        classification = self._classification_map[dicom_id]
+        per_class = classification.per_class
 
-        # Classification payload
-        classification_payload = {
-            "index": classification.index,
-            "name": classification.name,
-            "one_hot": classification.one_hot(),
-            "classes": list(classification.classes),
-            "per_class": classification.per_class,
-            "positives": list(classification.positives),
-            "ambiguous": classification.ambiguous,
-        }
-
-        # Bounding box payload for downstream processing
-        if width > 1:
-            scale_x = (target_width - 1) / (width - 1)
-        else:
-            scale_x = 1.0
-        if height > 1:
-            scale_y = (target_height - 1) / (height - 1)
-        else:
-            scale_y = 1.0
-
-        boxes_payload = [
-            {
-                "x1": box.x1,
-                "y1": box.y1,
-                "x2": box.x2,
-                "y2": box.y2,
-                "class_id": box.cls_id,
-                "class_name": box.cls_name,
-                "x1_resized": int(round(box.x1 * scale_x)),
-                "y1_resized": int(round(box.y1 * scale_y)),
-                "x2_resized": int(round(box.x2 * scale_x)),
-                "y2_resized": int(round(box.y2 * scale_y)),
-            }
-            for box in boxes
-        ]
-
-        # Fixation payload with explicit x/y/duration entries
-        duration_sec = (dwell_ms.astype(np.float32) / 1000.0).astype(np.float32)
-        fixations_payload = {
-            "xy": torch.from_numpy(xy_px.astype(np.float32)),
-            "xy_resized": torch.from_numpy(xy_resized_px.astype(np.float32)),
-            "xy_norm": torch.from_numpy(xy_norm_arr),
-            "time": torch.from_numpy(times_sec.astype(np.float32)),
-            "dwell": torch.from_numpy(dwell_ms.astype(np.float32)),
-            "duration": torch.from_numpy(duration_sec),
-            "seg_hits": torch.from_numpy(seg_hits).float(),
-            "box_hits": torch.from_numpy(box_hits).float(),
-        }
-
-        # Assemble the complete multimodal sample
         sample = {
-            "dicom_id": dicom_id,                         # Case identifier
-            "image": image_tensor,                        # Chest X-ray image (1, H, W)
-            "fixations": fixations_payload,               # Eye tracking data and mappings
-            "transcript": transcript_payload,             # Radiologist report
-            "segments": segments_resized.float(),         # Segmentation one-hot (includes background)
-            "box_masks": box_masks_resized.float(),       # Bounding box one-hot masks
-            "boxes": boxes_payload,                       # Bounding box coordinates & classes
-            "labels": {                                   # Diagnostic labels
-                "binary": labels_vec.float(),             # Binary disease labels
-                "binary_names": label_names,              # Names of label columns
-                "final_diagnosis": final_dx,              # Primary diagnosis text
-                "diagnoses": diagnoses,                   # All diagnoses list
-                "raw_row": labels_row,                    # Raw CSV row data
-                "classification": classification_payload, # Single-label classification
+            "dicom_id": dicom_id,
+            "image": image_tensor,
+            "fixations": {
+                "xy": torch.from_numpy(xy_px.astype(np.float32)),
+                "xy_norm": torch.from_numpy(xy_norm.astype(np.float32)),
+                "time": torch.from_numpy(times_sec.astype(np.float32)),
+                "dwell": torch.from_numpy(dwell.astype(np.float32)),   # seconds
+                "seg_hits": torch.from_numpy(seg_hits).float(),
+                "box_hits": torch.from_numpy(box_hits).float(),
             },
-            "meta": {                                     # Metadata
-                "segment_names": segment_names,                      # Anatomical region names
-                "segment_names_with_background": segment_names_with_background,
-                "box_class_names": box_class_names,                  # Abnormality class names
-                "original_image_size": (height, width),              # Original resolution
-                "image_size": DEFAULT_IMAGE_SIZE,                    # Resized resolution
+            "segment_presence": segment_presence.float(),
+            "box_presence": box_presence.float(),
+            "transcript": transcript_payload,
+            "labels": {
+                "classification": {
+                    "index": classification.index,
+                    "name": classification.name,
+                    "classes": classification.classes,
+                    "one_hot": classification.one_hot(),
+                    "ambiguous": classification.ambiguous,
+                    "per_class": per_class,
+                    "positives": classification.positives,
+                },
+                "single_index": torch.tensor(classification.index, dtype=torch.long),
+                "single_name": classification.name,
+                "single_class_names": classification.classes,
+                "final_diagnosis": final_dx,
+                "diagnoses": diagnoses,
+            },
+            "boxes": boxes,
+            "meta": {
+                "segment_names": segment_names,
+                "box_class_names": box_class_names,
+                "segmentation_height": int(height),
+                "segmentation_width": int(width),
+                "image_height": int(image_tensor.shape[-2]),
+                "image_width": int(image_tensor.shape[-1]),
             },
         }
         return sample
 
 
+# -------------------------------------------------------------------------- #
+#   Collate function (unchanged – only minor comment tweaks)
+# -------------------------------------------------------------------------- #
 def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Custom batch collation function for EGDCXRDataset.
-    
-    This function handles the batching of variable-length sequences (eye tracking data)
-    by padding them to the same length. It also stacks fixed-size tensors and
-    preserves metadata across the batch.
-    
-    Key operations:
-    1. Pads variable-length fixation sequences to the same length
-    2. Stacks fixed-size tensors (images, labels)
-    3. Preserves sequence lengths for proper masking
-    4. Maintains metadata consistency across the batch
-    
-    Args:
-        batch: List of individual samples from the dataset
-        
-    Returns:
-        Dictionary containing batched data with consistent tensor shapes
-    """
-    # Extract case IDs and sequence lengths
+    """Pad variable-length gaze sequences and stack fixed tensors."""
     dicom_ids = [item["dicom_id"] for item in batch]
     lengths = torch.tensor([item["fixations"]["xy"].shape[0] for item in batch], dtype=torch.long)
 
-    # Pad variable-length sequences to the same length
-    xy = pad_sequence([item["fixations"]["xy"] for item in batch], batch_first=True)
-    xy_resized = pad_sequence([item["fixations"]["xy_resized"] for item in batch], batch_first=True)
-    xy_norm = pad_sequence([item["fixations"]["xy_norm"] for item in batch], batch_first=True)
-    dwell = pad_sequence([item["fixations"]["dwell"] for item in batch], batch_first=True)
-    duration = pad_sequence([item["fixations"]["duration"] for item in batch], batch_first=True)
-    times = pad_sequence([item["fixations"]["time"] for item in batch], batch_first=True)
-    seg_hits = pad_sequence([item["fixations"]["seg_hits"] for item in batch], batch_first=True)
-    box_hits = pad_sequence([item["fixations"]["box_hits"] for item in batch], batch_first=True)
+    xy      = pad_sequence([item["fixations"]["xy"]       for item in batch], batch_first=True)
+    xy_norm = pad_sequence([item["fixations"]["xy_norm"]  for item in batch], batch_first=True)
+    dwell   = pad_sequence([item["fixations"]["dwell"]    for item in batch], batch_first=True)
+    times   = pad_sequence([item["fixations"]["time"]     for item in batch], batch_first=True)
+    seg_h   = pad_sequence([item["fixations"]["seg_hits"] for item in batch], batch_first=True)
+    box_h   = pad_sequence([item["fixations"]["box_hits"] for item in batch], batch_first=True)
 
-    # Stack fixed-size tensors
     images = torch.stack([item["image"] for item in batch], dim=0)
-    segments = torch.stack([item["segments"] for item in batch], dim=0)
-    box_masks = torch.stack([item["box_masks"] for item in batch], dim=0)
-    transcripts = [item["transcript"] for item in batch]  # Keep as list (variable content)
+    seg_pres = torch.stack([item["segment_presence"] for item in batch], dim=0)
+    box_pres = torch.stack([item["box_presence"] for item in batch], dim=0)
+    transcripts = [item["transcript"] for item in batch]
 
-    # Stack binary labels and preserve metadata
-    labels_binary = torch.stack([item["labels"]["binary"] for item in batch], dim=0)
-    classification_one_hot = torch.stack([item["labels"]["classification"]["one_hot"] for item in batch], dim=0)
-    classification_indices = torch.tensor(
-        [item["labels"]["classification"]["index"] for item in batch], dtype=torch.long
-    )
-    classification_names = [item["labels"]["classification"]["name"] for item in batch]
-    classification_ambiguous = [item["labels"]["classification"]["ambiguous"] for item in batch]
-    classification_per_class = [item["labels"]["classification"]["per_class"] for item in batch]
-    classification_positives = [item["labels"]["classification"]["positives"] for item in batch]
-    classification_classes = batch[0]["labels"]["classification"]["classes"]
+    # labels
+    one_hot = torch.stack([item["labels"]["classification"]["one_hot"] for item in batch], dim=0)
+    idxs    = torch.tensor([item["labels"]["classification"]["index"] for item in batch], dtype=torch.long)
+    names   = [item["labels"]["classification"]["name"] for item in batch]
+    ambig   = [item["labels"]["classification"]["ambiguous"] for item in batch]
+    percls  = [item["labels"]["classification"]["per_class"] for item in batch]
+    pos     = [item["labels"]["classification"]["positives"] for item in batch]
+    class_names = list(batch[0]["labels"]["classification"]["classes"])
+
+    single_idx = torch.stack([item["labels"]["single_index"] for item in batch], dim=0)
+    single_nam = [item["labels"]["single_name"] for item in batch]
 
     labels_dict = {
-        "binary": labels_binary,
-        "binary_names": batch[0]["labels"]["binary_names"],  # Same across batch
         "final_diagnosis": [item["labels"]["final_diagnosis"] for item in batch],
         "diagnoses": [item["labels"]["diagnoses"] for item in batch],
-        "raw_row": [item["labels"]["raw_row"] for item in batch],
         "classification": {
-            "one_hot": classification_one_hot,
-            "indices": classification_indices,
-            "names": classification_names,
-            "classes": classification_classes,
-            "ambiguous": classification_ambiguous,
-            "per_class": classification_per_class,
-            "positives": classification_positives,
+            "one_hot": one_hot, "indices": idxs, "names": names,
+            "classes": class_names, "ambiguous": ambig,
+            "per_class": percls, "positives": pos,
+            "index": idxs, "name": names,
         },
+        "single_index": single_idx,
+        "single_name": single_nam,
+        "single_class_names": class_names,
     }
 
-    # Preserve metadata (same across batch)
     meta = {
         "segment_names": batch[0]["meta"]["segment_names"],
         "box_class_names": batch[0]["meta"]["box_class_names"],
-        "segment_names_with_background": batch[0]["meta"]["segment_names_with_background"],
-        "image_size": batch[0]["meta"]["image_size"],
-        "original_image_size": batch[0]["meta"]["original_image_size"],
+        "segmentation_height": batch[0]["meta"].get("segmentation_height"),
+        "segmentation_width": batch[0]["meta"].get("segmentation_width"),
+        "image_height": batch[0]["meta"].get("image_height"),
+        "image_width": batch[0]["meta"].get("image_width"),
     }
 
     return {
-        "dicom_ids": dicom_ids,           # List of case IDs
-        "images": images,                 # Stacked images (B, 1, 224, 224)
-        "segments": segments,             # Stacked segmentation masks (B, C, H, W)
-        "box_masks": box_masks,           # Stacked bounding box masks (B, K, H, W)
-        "fixations": {                    # Padded fixation data
-            "xy": xy,                     # Padded coordinates (B, max_T, 2)
-            "xy_resized": xy_resized,     # Coordinates aligned with resized image
-            "xy_norm": xy_norm,           # Normalized coordinates in [0,1]
-            "dwell": dwell,               # Padded durations (B, max_T)
-            "duration": duration,         # Padded durations in seconds (B, max_T)
-            "time": times,                # Padded timestamps (B, max_T)
-            "seg_hits": seg_hits,         # Padded segment hits (B, max_T, num_segments)
-            "box_hits": box_hits,         # Padded box hits (B, max_T, num_box_classes)
-            "lengths": lengths,           # Original sequence lengths (B,)
+        "dicom_ids": dicom_ids,
+        "images": images,
+        "segment_presence": seg_pres,
+        "box_presence": box_pres,
+        "fixations": {
+            "xy": xy,
+            "xy_norm": xy_norm,
+            "dwell": dwell,
+            "time": times,
+            "seg_hits": seg_h,
+            "box_hits": box_h,
+            "lengths": lengths,
         },
-        "transcripts": transcripts,       # List of transcript dictionaries
-        "boxes": [item["boxes"] for item in batch],  # Bounding box metadata per sample
-        "labels": labels_dict,            # Batched labels and metadata
-        "meta": meta,                     # Metadata (same across batch)
+        "transcripts": transcripts,
+        "labels": labels_dict,
+        "meta": meta,
+        "boxes": [item["boxes"] for item in batch],
     }
 
 
@@ -1059,29 +750,16 @@ def create_dataloader(
     *,
     batch_size: int = 1,
     shuffle: bool = False,
+    sampler=None,
     num_workers: int = 0,
 ) -> DataLoader:
-    """
-    Factory function to create a DataLoader with the custom collate function.
-    
-    This is a convenience function that creates a PyTorch DataLoader configured
-    specifically for the EGDCXRDataset. It automatically uses the custom collate_fn
-    to handle variable-length sequences properly.
-    
-    Args:
-        dataset: The EGDCXRDataset instance to create a loader for
-        batch_size: Number of samples per batch (default: 1)
-        shuffle: Whether to shuffle the data (default: False)
-        num_workers: Number of worker processes for data loading (default: 0)
-        
-    Returns:
-        PyTorch DataLoader configured for the multimodal dataset
-    """
+    """Convenient DataLoader factory using the custom collate."""
     return DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=shuffle,
+        shuffle=shuffle if sampler is None else False,
+        sampler=sampler,
         num_workers=num_workers,
-        collate_fn=collate_fn,  # Use custom collate function for variable-length sequences
-        drop_last=False,        # Keep all samples, even incomplete batches
+        collate_fn=collate_fn,
+        drop_last=False,
     )

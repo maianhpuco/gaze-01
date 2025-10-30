@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_cnn.py", line 110, in <module>
+    main()
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_cnn.py", line 77, in main
+    train_set = EGDCXRDataset(cfg, split="train")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: EGDCXRDataset.__init__() got an unexpected keyword argument 'split'
+srun: error: compute-0-8: task 0: Exited with exit code 1

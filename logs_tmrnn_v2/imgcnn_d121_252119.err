@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_cnn.py", line 19, in <module>
+    if str(SRC) not in sys.path:
+                       ^^^
+NameError: name 'sys' is not defined
+srun: error: compute-0-8: task 0: Exited with exit code 1
