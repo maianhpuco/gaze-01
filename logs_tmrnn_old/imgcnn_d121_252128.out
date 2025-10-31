@@ -1,0 +1,15 @@
+Starting training at: Thu Oct 30 05:13:12 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 219 cases | regions=4 | bbox_classes=17
+[Epoch 01] train: loss=0.7905 acc=0.643 | val:   loss=0.9696 acc=0.561
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 02] train: loss=0.5957 acc=0.783 | val:   loss=1.1881 acc=0.411
+[Epoch 03] train: loss=0.4272 acc=0.878 | val:   loss=1.2154 acc=0.626
+[Epoch 04] train: loss=0.3521 acc=0.925 | val:   loss=1.2945 acc=0.533
+[Epoch 05] train: loss=0.3231 acc=0.943 | val:   loss=1.3967 acc=0.542
+[Epoch 06] train: loss=0.3423 acc=0.933 | val:   loss=1.4726 acc=0.561
+Early stopping (no improvement for 5 epochs).
+[Test] loss=1.5523 acc=0.539
+Training finished.
+Finished at: Thu Oct 30 05:28:51 AM CDT 2025

@@ -31,6 +31,6 @@ model:
 
 output_path:
   checkpoint_dir: runs/checkpoints
-  best_ckpt_name: tmrnn_egd_cxr_best.pt
+  best_ckpt_name: tmrnn_egd_cxr_best_near_gold.pt
 
 

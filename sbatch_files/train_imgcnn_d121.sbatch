@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --job-name=imgcnn_d121
-#SBATCH --output=logs_tmrnn_v2/imgcnn_d121_%j.out
-#SBATCH --error=logs_tmrnn_v2/imgcnn_d121_%j.err
+#SBATCH --output=logs_cnn/imgcnn_d121_%j.out
+#SBATCH --error=logs_cnn/imgcnn_d121_%j.err
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=4
 
 set -euo pipefail
-mkdir -p logs_tmrnn_v2
+mkdir -p logs_cnn
 
 export HF_HOME=/project/hnguyen2/mvu9/.cache/huggingface
 export HF_HUB_DISABLE_TELEMETRY=1

@@ -1,0 +1,21 @@
+Starting training at: Thu Oct 30 06:50:32 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+[Epoch 01] train loss=10.2185 (cls=1.0866, txt=9.1319) acc=40.08% | val loss=1.0902 (cls=1.0902, txt=0.0000) acc=35.51%
+  → Saved best to runs/checkpoints/tmrnn_d121_full/tmrnn_d121_full.pt
+[Epoch 02] train loss=9.2693 (cls=0.9051, txt=8.3642) acc=61.77% | val loss=1.0836 (cls=1.0836, txt=0.0000) acc=56.07%
+  → Saved best to runs/checkpoints/tmrnn_d121_full/tmrnn_d121_full.pt
+[Epoch 03] train loss=7.5829 (cls=0.6468, txt=6.9361) acc=76.85% | val loss=1.3744 (cls=1.3744, txt=0.0000) acc=44.86%
+[Epoch 04] train loss=7.1727 (cls=0.5273, txt=6.6454) acc=82.28% | val loss=1.0725 (cls=1.0725, txt=0.0000) acc=58.88%
+  → Saved best to runs/checkpoints/tmrnn_d121_full/tmrnn_d121_full.pt
+[Epoch 05] train loss=6.9034 (cls=0.4091, txt=6.4943) acc=88.89% | val loss=0.9967 (cls=0.9967, txt=0.0000) acc=66.36%
+  → Saved best to runs/checkpoints/tmrnn_d121_full/tmrnn_d121_full.pt
+[Epoch 06] train loss=6.7883 (cls=0.3209, txt=6.4675) acc=93.92% | val loss=1.5850 (cls=1.5850, txt=0.0000) acc=48.60%
+[Epoch 07] train loss=6.8000 (cls=0.3390, txt=6.4610) acc=91.80% | val loss=1.1625 (cls=1.1625, txt=0.0000) acc=54.21%
+[Epoch 08] train loss=6.6901 (cls=0.3110, txt=6.3791) acc=93.52% | val loss=1.1364 (cls=1.1364, txt=0.0000) acc=57.01%
+[Epoch 09] train loss=6.8926 (cls=0.2971, txt=6.5955) acc=94.84% | val loss=1.0618 (cls=1.0618, txt=0.0000) acc=69.16%
+[Epoch 10] train loss=6.6403 (cls=0.2362, txt=6.4040) acc=97.09% | val loss=1.0019 (cls=1.0019, txt=0.0000) acc=64.49%
+[Epoch 11] train loss=6.7216 (cls=0.2426, txt=6.4790) acc=96.43% | val loss=1.2204 (cls=1.2204, txt=0.0000) acc=58.88%
+Early stopping (patience=6).
+Training finished.
+Finished at: Thu Oct 30 07:22:18 AM CDT 2025

@@ -1,0 +1,59 @@
+Starting training at: Thu Oct 30 10:05:41 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+[Epoch 01] train loss=4.9634 (cls=1.0005, txt=3.9628) acc=53.70% | val loss=1.1213 (cls=1.1213, txt=0.0000) acc=47.66%
+  → Saved best to runs/checkpoints/tmrnn_d121_full/tmrnn_d121_full.pt
+[Epoch 02] train loss=3.9287 (cls=0.7142, txt=3.2146) acc=72.09% | val loss=0.9744 (cls=0.9744, txt=0.0000) acc=59.81%
+  → Saved best to runs/checkpoints/tmrnn_d121_full/tmrnn_d121_full.pt
+[Epoch 03] train loss=3.5859 (cls=0.5022, txt=3.0837) acc=85.05% | val loss=1.2474 (cls=1.2474, txt=0.0000) acc=51.40%
+[Epoch 04] train loss=3.3249 (cls=0.3917, txt=2.9331) acc=89.68% | val loss=0.8866 (cls=0.8866, txt=0.0000) acc=63.55%
+  → Saved best to runs/checkpoints/tmrnn_d121_full/tmrnn_d121_full.pt
+[Epoch 05] train loss=3.1038 (cls=0.3530, txt=2.7508) acc=91.93% | val loss=1.0779 (cls=1.0779, txt=0.0000) acc=64.49%
+[Epoch 06] train loss=2.9869 (cls=0.2794, txt=2.7076) acc=95.37% | val loss=0.9624 (cls=0.9624, txt=0.0000) acc=66.36%
+[Epoch 07] train loss=2.9766 (cls=0.2878, txt=2.6889) acc=95.77% | val loss=1.3384 (cls=1.3384, txt=0.0000) acc=48.60%
+[Epoch 08] train loss=2.8509 (cls=0.2606, txt=2.5903) acc=96.43% | val loss=1.3900 (cls=1.3900, txt=0.0000) acc=51.40%
+[Epoch 09] train loss=2.8105 (cls=0.2445, txt=2.5660) acc=96.83% | val loss=0.9638 (cls=0.9638, txt=0.0000) acc=63.55%
+[Epoch 10] train loss=2.7311 (cls=0.2126, txt=2.5185) acc=98.81% | val loss=0.8032 (cls=0.8032, txt=0.0000) acc=71.03%
+  → Saved best to runs/checkpoints/tmrnn_d121_full/tmrnn_d121_full.pt
+[Epoch 11] train loss=2.6415 (cls=0.2010, txt=2.4405) acc=99.34% | val loss=1.0443 (cls=1.0443, txt=0.0000) acc=67.29%
+[Epoch 12] train loss=2.5512 (cls=0.2012, txt=2.3500) acc=99.21% | val loss=0.8664 (cls=0.8664, txt=0.0000) acc=69.16%
+[Epoch 13] train loss=2.5353 (cls=0.1888, txt=2.3464) acc=100.00% | val loss=0.9665 (cls=0.9665, txt=0.0000) acc=64.49%
+[Epoch 14] train loss=2.5042 (cls=0.1991, txt=2.3051) acc=99.34% | val loss=1.0770 (cls=1.0770, txt=0.0000) acc=58.88%
+[Epoch 15] train loss=2.4332 (cls=0.1937, txt=2.2395) acc=99.74% | val loss=0.9650 (cls=0.9650, txt=0.0000) acc=67.29%
+[Epoch 16] train loss=2.3455 (cls=0.2052, txt=2.1403) acc=99.47% | val loss=1.2166 (cls=1.2166, txt=0.0000) acc=61.68%
+[Epoch 17] train loss=2.3176 (cls=0.1904, txt=2.1272) acc=99.74% | val loss=1.0622 (cls=1.0622, txt=0.0000) acc=61.68%
+[Epoch 18] train loss=2.2938 (cls=0.1853, txt=2.1085) acc=99.74% | val loss=0.9637 (cls=0.9637, txt=0.0000) acc=66.36%
+[Epoch 19] train loss=2.2431 (cls=0.1965, txt=2.0466) acc=99.21% | val loss=0.9293 (cls=0.9293, txt=0.0000) acc=61.68%
+[Epoch 20] train loss=2.2103 (cls=0.1888, txt=2.0215) acc=99.60% | val loss=0.9290 (cls=0.9290, txt=0.0000) acc=70.09%
+[Epoch 21] train loss=2.0735 (cls=0.1816, txt=1.8919) acc=100.00% | val loss=0.9645 (cls=0.9645, txt=0.0000) acc=65.42%
+[Epoch 22] train loss=2.0521 (cls=0.1905, txt=1.8615) acc=99.21% | val loss=0.9120 (cls=0.9120, txt=0.0000) acc=70.09%
+[Epoch 23] train loss=2.1312 (cls=0.1865, txt=1.9448) acc=100.00% | val loss=1.0675 (cls=1.0675, txt=0.0000) acc=65.42%
+[Epoch 24] train loss=2.0794 (cls=0.1840, txt=1.8954) acc=99.74% | val loss=0.9402 (cls=0.9402, txt=0.0000) acc=66.36%
+[Epoch 25] train loss=2.0433 (cls=0.1813, txt=1.8620) acc=99.87% | val loss=1.2654 (cls=1.2654, txt=0.0000) acc=56.07%
+[Epoch 26] train loss=2.0344 (cls=0.1812, txt=1.8532) acc=99.87% | val loss=1.0665 (cls=1.0665, txt=0.0000) acc=58.88%
+[Epoch 27] train loss=1.9861 (cls=0.1841, txt=1.8020) acc=99.60% | val loss=0.9472 (cls=0.9472, txt=0.0000) acc=66.36%
+[Epoch 28] train loss=1.9390 (cls=0.1932, txt=1.7458) acc=99.21% | val loss=1.0112 (cls=1.0112, txt=0.0000) acc=66.36%
+[Epoch 29] train loss=1.9298 (cls=0.1816, txt=1.7482) acc=100.00% | val loss=0.9297 (cls=0.9297, txt=0.0000) acc=68.22%
+[Epoch 30] train loss=1.8755 (cls=0.1856, txt=1.6899) acc=99.60% | val loss=1.2611 (cls=1.2611, txt=0.0000) acc=54.21%
+[Epoch 31] train loss=1.8879 (cls=0.1835, txt=1.7044) acc=100.00% | val loss=1.0184 (cls=1.0184, txt=0.0000) acc=66.36%
+[Epoch 32] train loss=1.8201 (cls=0.1799, txt=1.6402) acc=99.87% | val loss=1.1748 (cls=1.1748, txt=0.0000) acc=58.88%
+[Epoch 33] train loss=1.8547 (cls=0.1836, txt=1.6711) acc=99.87% | val loss=1.1105 (cls=1.1105, txt=0.0000) acc=57.94%
+[Epoch 34] train loss=1.7781 (cls=0.1786, txt=1.5996) acc=100.00% | val loss=1.0180 (cls=1.0180, txt=0.0000) acc=67.29%
+[Epoch 35] train loss=1.8489 (cls=0.1806, txt=1.6684) acc=99.87% | val loss=1.0849 (cls=1.0849, txt=0.0000) acc=64.49%
+[Epoch 36] train loss=1.7736 (cls=0.1821, txt=1.5915) acc=99.60% | val loss=1.0998 (cls=1.0998, txt=0.0000) acc=67.29%
+[Epoch 37] train loss=1.8023 (cls=0.1776, txt=1.6247) acc=100.00% | val loss=0.9667 (cls=0.9667, txt=0.0000) acc=71.03%
+[Epoch 38] train loss=1.7579 (cls=0.1868, txt=1.5711) acc=99.60% | val loss=1.1050 (cls=1.1050, txt=0.0000) acc=59.81%
+[Epoch 39] train loss=1.7324 (cls=0.1815, txt=1.5509) acc=99.87% | val loss=1.2053 (cls=1.2053, txt=0.0000) acc=53.27%
+[Epoch 40] train loss=1.7559 (cls=0.1805, txt=1.5755) acc=100.00% | val loss=0.9137 (cls=0.9137, txt=0.0000) acc=69.16%
+[Epoch 41] train loss=1.7341 (cls=0.1810, txt=1.5530) acc=99.74% | val loss=1.0212 (cls=1.0212, txt=0.0000) acc=60.75%
+[Epoch 42] train loss=1.6953 (cls=0.1775, txt=1.5179) acc=100.00% | val loss=1.0233 (cls=1.0233, txt=0.0000) acc=67.29%
+[Epoch 43] train loss=1.7064 (cls=0.1787, txt=1.5277) acc=99.87% | val loss=1.0707 (cls=1.0707, txt=0.0000) acc=63.55%
+[Epoch 44] train loss=1.6790 (cls=0.1850, txt=1.4940) acc=99.74% | val loss=0.9556 (cls=0.9556, txt=0.0000) acc=68.22%
+[Epoch 45] train loss=1.6556 (cls=0.1789, txt=1.4767) acc=99.87% | val loss=1.0936 (cls=1.0936, txt=0.0000) acc=64.49%
+[Epoch 46] train loss=1.6095 (cls=0.1759, txt=1.4335) acc=99.87% | val loss=1.0732 (cls=1.0732, txt=0.0000) acc=65.42%
+[Epoch 47] train loss=1.6308 (cls=0.1824, txt=1.4483) acc=99.60% | val loss=1.0990 (cls=1.0990, txt=0.0000) acc=58.88%
+[Epoch 48] train loss=1.6430 (cls=0.1816, txt=1.4614) acc=99.60% | val loss=1.1155 (cls=1.1155, txt=0.0000) acc=66.36%
+[Epoch 49] train loss=1.5967 (cls=0.1852, txt=1.4116) acc=99.34% | val loss=1.1230 (cls=1.1230, txt=0.0000) acc=66.36%
+[Epoch 50] train loss=1.6368 (cls=0.2120, txt=1.4248) acc=98.81% | val loss=1.1885 (cls=1.1885, txt=0.0000) acc=64.49%
+Training finished.
+Finished at: Thu Oct 30 12:14:50 PM CDT 2025

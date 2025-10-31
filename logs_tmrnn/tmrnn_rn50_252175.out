@@ -1,0 +1,12 @@
+Starting training at: Fri Oct 31 06:53:28 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 219 cases | regions=4 | bbox_classes=17
+[Epoch 01] TRAIN  loss=6.4853  acc=0.323  (cls=1.0979, txt=5.3874)
+[Epoch 01] VAL    loss=1.0995  acc=0.318  macroAUC=0.514  perClassAUC=[0.542,0.462,0.538]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints_ver7/tmrnn_rn50_full/tmrnn_rn50_full.pt
+[Epoch 02] TRAIN  loss=5.5695  acc=0.308  (cls=1.1012, txt=4.4684)
+[Epoch 02] VAL    loss=1.0991  acc=0.346  macroAUC=0.511  perClassAUC=[0.557,0.431,0.543]
+[Epoch 03] TRAIN  loss=5.1432  acc=0.329  (cls=1.0963, txt=4.0469)
+[Epoch 03] VAL    loss=1.0999  acc=0.355  macroAUC=0.518  perClassAUC=[0.615,0.406,0.532]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints_ver7/tmrnn_rn50_full/tmrnn_rn50_full.pt

@@ -1,0 +1,64 @@
+Starting training at: Fri Oct 31 04:25:41 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 219 cases | regions=4 | bbox_classes=17
+Starting with frozen backbone; will unfreeze after epoch 5
+[Epoch 01] train: loss=1.1114 acc=0.386 | val:   loss=1.0917 acc=0.355
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 02] train: loss=1.0369 acc=0.488 | val:   loss=0.9969 acc=0.486
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 03] train: loss=0.9034 acc=0.593 | val:   loss=1.0048 acc=0.486
+[Epoch 04] train: loss=0.8962 acc=0.611 | val:   loss=0.9787 acc=0.533
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 05] train: loss=0.8529 acc=0.630 | val:   loss=1.0066 acc=0.486
+[Epoch 06] Unfreezing backbone
+[Epoch 06] train: loss=0.8514 acc=0.647 | val:   loss=0.9462 acc=0.570
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 07] train: loss=0.5637 acc=0.813 | val:   loss=1.0871 acc=0.570
+[Epoch 08] train: loss=0.4369 acc=0.884 | val:   loss=1.3285 acc=0.579
+[Epoch 09] train: loss=0.3632 acc=0.915 | val:   loss=1.0589 acc=0.645
+[Epoch 10] train: loss=0.3235 acc=0.944 | val:   loss=1.5978 acc=0.523
+[Epoch 11] train: loss=0.3100 acc=0.946 | val:   loss=0.9232 acc=0.682
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 12] train: loss=0.2960 acc=0.944 | val:   loss=1.0687 acc=0.645
+[Epoch 13] train: loss=0.2900 acc=0.956 | val:   loss=1.3978 acc=0.598
+[Epoch 14] train: loss=0.2541 acc=0.971 | val:   loss=1.3634 acc=0.505
+[Epoch 15] train: loss=0.2439 acc=0.980 | val:   loss=1.1131 acc=0.607
+[Epoch 16] train: loss=0.2461 acc=0.974 | val:   loss=1.3011 acc=0.589
+[Epoch 17] train: loss=0.2361 acc=0.980 | val:   loss=1.2314 acc=0.570
+[Epoch 18] train: loss=0.2290 acc=0.984 | val:   loss=1.7455 acc=0.533
+[Epoch 19] train: loss=0.2487 acc=0.970 | val:   loss=1.3517 acc=0.542
+[Epoch 20] train: loss=0.2270 acc=0.989 | val:   loss=1.1462 acc=0.617
+[Epoch 21] train: loss=0.2179 acc=0.985 | val:   loss=1.1490 acc=0.617
+[Epoch 22] train: loss=0.2059 acc=0.993 | val:   loss=1.3545 acc=0.598
+[Epoch 23] train: loss=0.2114 acc=0.991 | val:   loss=1.1422 acc=0.617
+[Epoch 24] train: loss=0.2145 acc=0.987 | val:   loss=1.0550 acc=0.673
+[Epoch 25] train: loss=0.2241 acc=0.984 | val:   loss=1.1546 acc=0.626
+[Epoch 26] train: loss=0.2018 acc=0.993 | val:   loss=1.0207 acc=0.682
+[Epoch 27] train: loss=0.2226 acc=0.981 | val:   loss=1.3692 acc=0.589
+[Epoch 28] train: loss=0.2135 acc=0.989 | val:   loss=1.1265 acc=0.654
+[Epoch 29] train: loss=0.2114 acc=0.987 | val:   loss=0.9796 acc=0.692
+[Epoch 30] train: loss=0.1889 acc=0.996 | val:   loss=0.9892 acc=0.654
+[Epoch 31] train: loss=0.1930 acc=0.999 | val:   loss=1.0776 acc=0.664
+[Epoch 32] train: loss=0.1968 acc=0.993 | val:   loss=1.1929 acc=0.682
+[Epoch 33] train: loss=0.1858 acc=1.000 | val:   loss=1.4447 acc=0.589
+[Epoch 34] train: loss=0.1893 acc=0.997 | val:   loss=1.0738 acc=0.654
+[Epoch 35] train: loss=0.1843 acc=1.000 | val:   loss=1.5995 acc=0.542
+[Epoch 36] train: loss=0.2085 acc=0.988 | val:   loss=1.4400 acc=0.598
+[Epoch 37] train: loss=0.1888 acc=0.996 | val:   loss=1.2237 acc=0.589
+[Epoch 38] train: loss=0.1819 acc=0.999 | val:   loss=1.0833 acc=0.673
+[Epoch 39] train: loss=0.1964 acc=0.996 | val:   loss=1.4414 acc=0.589
+[Epoch 40] train: loss=0.1857 acc=0.997 | val:   loss=1.4148 acc=0.579
+[Epoch 41] train: loss=0.1895 acc=0.991 | val:   loss=1.1364 acc=0.682
+[Epoch 42] train: loss=0.1857 acc=0.997 | val:   loss=1.2791 acc=0.598
+[Epoch 43] train: loss=0.1875 acc=0.995 | val:   loss=1.1228 acc=0.617
+[Epoch 44] train: loss=0.2057 acc=0.987 | val:   loss=1.6651 acc=0.467
+[Epoch 45] train: loss=0.1929 acc=0.995 | val:   loss=1.3702 acc=0.570
+[Epoch 46] train: loss=0.1960 acc=0.992 | val:   loss=1.2568 acc=0.607
+[Epoch 47] train: loss=0.2003 acc=0.992 | val:   loss=1.0382 acc=0.664
+[Epoch 48] train: loss=0.1907 acc=0.997 | val:   loss=1.1645 acc=0.673
+[Epoch 49] train: loss=0.1935 acc=0.996 | val:   loss=1.1860 acc=0.645
+[Epoch 50] train: loss=0.1868 acc=0.996 | val:   loss=1.0035 acc=0.654
+[Test] loss=1.1465 acc=0.680
+Training finished.
+Finished at: Fri Oct 31 06:32:01 AM CDT 2025

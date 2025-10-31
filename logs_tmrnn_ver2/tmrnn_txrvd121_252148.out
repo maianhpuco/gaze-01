@@ -1,0 +1,4 @@
+Starting training at: Thu Oct 30 07:20:56 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+Warning: Input image does not appear to be normalized correctly. The input image has the range [0.00,1.00] which doesn't seem to be in the [-1024,1024] range. This warning may be wrong though. Only the first image is tested and we are only using a heuristic in an attempt to save a user from using the wrong normalization.

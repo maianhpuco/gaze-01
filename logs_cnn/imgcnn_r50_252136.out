@@ -1,0 +1,73 @@
+Starting training at: Thu Oct 30 06:07:33 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 219 cases | regions=4 | bbox_classes=17
+[Epoch 01] train: loss=1.0836 acc=0.388 | val:   loss=1.0916 acc=0.430
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 02] train: loss=1.0508 acc=0.557 | val:   loss=1.0883 acc=0.374
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 03] train: loss=1.0095 acc=0.575 | val:   loss=1.0728 acc=0.411
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 04] train: loss=0.9930 acc=0.598 | val:   loss=1.0468 acc=0.421
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 05] train: loss=0.9663 acc=0.639 | val:   loss=1.0372 acc=0.458
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 06] train: loss=0.9452 acc=0.630 | val:   loss=1.0247 acc=0.458
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 07] train: loss=0.9282 acc=0.668 | val:   loss=1.0220 acc=0.449
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 08] train: loss=0.9207 acc=0.665 | val:   loss=1.0201 acc=0.467
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 09] train: loss=0.9117 acc=0.669 | val:   loss=1.0159 acc=0.458
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 10] train: loss=0.8892 acc=0.692 | val:   loss=1.0082 acc=0.486
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 11] train: loss=0.8611 acc=0.688 | val:   loss=1.0010 acc=0.505
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 12] train: loss=0.8601 acc=0.731 | val:   loss=0.9964 acc=0.514
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 13] train: loss=0.8498 acc=0.710 | val:   loss=0.9975 acc=0.486
+[Epoch 14] train: loss=0.8323 acc=0.730 | val:   loss=0.9879 acc=0.495
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 15] train: loss=0.8343 acc=0.706 | val:   loss=0.9925 acc=0.495
+[Epoch 16] train: loss=0.8142 acc=0.754 | val:   loss=0.9860 acc=0.458
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 17] train: loss=0.8140 acc=0.722 | val:   loss=0.9799 acc=0.495
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 18] train: loss=0.7969 acc=0.731 | val:   loss=0.9789 acc=0.495
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 19] train: loss=0.7901 acc=0.737 | val:   loss=0.9811 acc=0.505
+[Epoch 20] train: loss=0.7823 acc=0.743 | val:   loss=0.9789 acc=0.486
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 21] train: loss=0.7631 acc=0.772 | val:   loss=0.9839 acc=0.505
+[Epoch 22] train: loss=0.7626 acc=0.775 | val:   loss=0.9728 acc=0.495
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 23] train: loss=0.7583 acc=0.758 | val:   loss=0.9767 acc=0.486
+[Epoch 24] train: loss=0.7528 acc=0.776 | val:   loss=0.9766 acc=0.495
+[Epoch 25] train: loss=0.7310 acc=0.779 | val:   loss=0.9788 acc=0.486
+[Epoch 26] train: loss=0.7189 acc=0.815 | val:   loss=0.9809 acc=0.495
+[Epoch 27] train: loss=0.7382 acc=0.765 | val:   loss=0.9734 acc=0.486
+[Epoch 28] train: loss=0.7128 acc=0.786 | val:   loss=0.9673 acc=0.505
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 29] train: loss=0.7052 acc=0.779 | val:   loss=0.9755 acc=0.523
+[Epoch 30] train: loss=0.7165 acc=0.791 | val:   loss=0.9753 acc=0.514
+[Epoch 31] train: loss=0.7004 acc=0.795 | val:   loss=0.9675 acc=0.505
+[Epoch 32] train: loss=0.7058 acc=0.803 | val:   loss=0.9787 acc=0.505
+[Epoch 33] train: loss=0.6911 acc=0.800 | val:   loss=0.9931 acc=0.495
+[Epoch 34] train: loss=0.6945 acc=0.765 | val:   loss=0.9684 acc=0.533
+[Epoch 35] train: loss=0.6590 acc=0.825 | val:   loss=0.9644 acc=0.523
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 36] train: loss=0.6564 acc=0.827 | val:   loss=0.9738 acc=0.523
+[Epoch 37] train: loss=0.6706 acc=0.828 | val:   loss=0.9805 acc=0.505
+[Epoch 38] train: loss=0.6508 acc=0.844 | val:   loss=0.9738 acc=0.523
+[Epoch 39] train: loss=0.6468 acc=0.816 | val:   loss=0.9866 acc=0.505
+[Epoch 40] train: loss=0.6538 acc=0.806 | val:   loss=0.9690 acc=0.523
+[Epoch 41] train: loss=0.6533 acc=0.827 | val:   loss=0.9851 acc=0.533
+[Epoch 42] train: loss=0.6410 acc=0.835 | val:   loss=0.9716 acc=0.514
+[Epoch 43] train: loss=0.6435 acc=0.836 | val:   loss=0.9778 acc=0.505
+[Epoch 44] train: loss=0.6247 acc=0.861 | val:   loss=0.9796 acc=0.505
+[Epoch 45] train: loss=0.6235 acc=0.848 | val:   loss=0.9806 acc=0.505
+Early stopping (no improvement for 10 epochs).
+[Test] loss=0.9251 acc=0.571
+Training finished.
+Finished at: Thu Oct 30 07:58:05 AM CDT 2025

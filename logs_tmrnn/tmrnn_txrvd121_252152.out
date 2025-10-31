@@ -1,0 +1,24 @@
+Starting training at: Thu Oct 30 09:00:26 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+[Epoch 01] train loss=5.0065 (cls=1.0364, txt=3.9701) acc=50.66% | val loss=1.1947 (cls=1.1947, txt=0.0000) acc=32.71%
+  → Saved best to runs/checkpoints/tmrnn_txrvd121_full/tmrnn_txrvd121_full.pt
+[Epoch 02] train loss=4.0684 (cls=0.7894, txt=3.2791) acc=69.18% | val loss=1.4448 (cls=1.4448, txt=0.0000) acc=32.71%
+[Epoch 03] train loss=3.7620 (cls=0.6940, txt=3.0681) acc=73.94% | val loss=1.5091 (cls=1.5091, txt=0.0000) acc=32.71%
+[Epoch 04] train loss=3.5032 (cls=0.5747, txt=2.9285) acc=82.01% | val loss=1.8425 (cls=1.8425, txt=0.0000) acc=32.71%
+[Epoch 05] train loss=3.3630 (cls=0.5272, txt=2.8359) acc=81.75% | val loss=1.2386 (cls=1.2386, txt=0.0000) acc=33.64%
+[Epoch 06] train loss=3.1727 (cls=0.4176, txt=2.7551) acc=88.23% | val loss=0.6993 (cls=0.6993, txt=0.0000) acc=71.03%
+  → Saved best to runs/checkpoints/tmrnn_txrvd121_full/tmrnn_txrvd121_full.pt
+[Epoch 07] train loss=3.1140 (cls=0.4037, txt=2.7102) acc=89.68% | val loss=0.7826 (cls=0.7826, txt=0.0000) acc=69.16%
+[Epoch 08] train loss=3.0590 (cls=0.3503, txt=2.7087) acc=92.20% | val loss=0.7617 (cls=0.7617, txt=0.0000) acc=72.90%
+[Epoch 09] train loss=3.0326 (cls=0.3261, txt=2.7065) acc=93.39% | val loss=0.8374 (cls=0.8374, txt=0.0000) acc=70.09%
+[Epoch 10] train loss=2.9361 (cls=0.2754, txt=2.6607) acc=96.56% | val loss=0.9540 (cls=0.9540, txt=0.0000) acc=60.75%
+[Epoch 11] train loss=2.8614 (cls=0.2682, txt=2.5932) acc=96.16% | val loss=0.8993 (cls=0.8993, txt=0.0000) acc=71.03%
+[Epoch 12] train loss=2.8083 (cls=0.2354, txt=2.5729) acc=98.28% | val loss=0.8132 (cls=0.8132, txt=0.0000) acc=72.90%
+[Epoch 13] train loss=2.8118 (cls=0.2209, txt=2.5909) acc=98.41% | val loss=1.1103 (cls=1.1103, txt=0.0000) acc=70.09%
+[Epoch 14] train loss=2.7408 (cls=0.2123, txt=2.5285) acc=99.21% | val loss=0.8437 (cls=0.8437, txt=0.0000) acc=72.90%
+[Epoch 15] train loss=2.7685 (cls=0.2133, txt=2.5552) acc=98.81% | val loss=0.9763 (cls=0.9763, txt=0.0000) acc=68.22%
+[Epoch 16] train loss=2.6616 (cls=0.2087, txt=2.4528) acc=99.60% | val loss=1.1003 (cls=1.1003, txt=0.0000) acc=64.49%
+Early stopping (patience=10).
+Training finished.
+Finished at: Thu Oct 30 09:44:35 AM CDT 2025

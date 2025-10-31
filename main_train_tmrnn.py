@@ -1,55 +1,34 @@
 #!/usr/bin/env python3
-"""
-Training entry-point for TMRNN (EGD-CXR).
-Now supports:
-  --image_backbone [resnet18|resnet50|densenet121|txrv_densenet121]
-  --no_gaze          → drop gaze embedding
-  --no_roi           → drop ROI (seg+box) projection
-  --no_text          → no teacher-forcing (no transcript input), but keep decoder head
-  --no_text_decode   → classification-only (no decoder head at all)
-"""
-
 from __future__ import annotations
-import argparse
-import json
+import argparse, json, sys, yaml, os, math
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Optional
-import sys
+from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
 from torch.utils.data import WeightedRandomSampler
 from tqdm import tqdm
-import yaml
-import os
 
-# ==== Ensure local src import works (fix for ModuleNotFoundError) =====
+# local imports
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
-# =====================================================================
 
-# ------------------------------------------------------------------ #
-# Dataset & model
-# ------------------------------------------------------------------ #
-from egd_cxr_dataset.datasets.egd_cxr import EGDCXRDataset, create_dataloader
-import importlib
-model_candidates = ["src.models.tmrnn"]
-TMRNN_mod = None
-for modname in model_candidates:
-    try:
-        TMRNN_mod = importlib.import_module(modname)
-        TMRNN = getattr(TMRNN_mod, "TMRNN")
-        break
-    except Exception:
-        continue
-from src.models.tmrnn import build_vocabulary, encode_with_tau
+from egd_cxr_dataset.datasets.egd_cxr import EGDCXRDataset, create_dataloader  # type: ignore
+from src.models.tmrnn import TMRNN, build_vocabulary
 
-# ------------------------------------------------------------------ #
-# Helpers
-# ------------------------------------------------------------------ #
+# Optional AUC metrics
+try:
+    from sklearn.metrics import roc_auc_score
+    HAS_SK = True
+except Exception:
+    HAS_SK = False
+
+
+# ---------------- Helpers ----------------
 def set_seed(seed: int = 2025):
     import random, numpy as np
     random.seed(seed); torch.manual_seed(seed); np.random.seed(seed)
@@ -57,105 +36,92 @@ def set_seed(seed: int = 2025):
 
 def read_split_ids(split_dir: Path, split: str) -> List[str]:
     path = split_dir / f"{split}_ids.txt"
-    print(f"[INFO] Looking for split: {split} at {path}")
     if not path.exists():
-        raise FileNotFoundError(f"[ERROR] Split file not found: {path} (pwd={Path.cwd()})\n"
-                              f"Please check your config's split_files.dir value and that the split names match train/val/test exactly.\n"
-                              f"If running via sbatch or relative to YAML, ensure the split folder path is right.")
+        raise FileNotFoundError(f"[ERROR] Split file not found: {path}")
     ids: List[str] = []
     for raw in path.read_text(encoding="utf-8").splitlines():
         s = raw.strip()
-        if s and not s.startswith("#"): ids.append(s)
+        if s and not s.startswith("#"):
+            ids.append(s)
     if not ids:
         raise FileNotFoundError(f"[ERROR] Split file exists but is empty: {path}")
     return ids
+
+def _move_to_device(batch: Dict[str, Any], device: torch.device) -> Dict[str, Any]:
+    for k, v in list(batch.items()):
+        if isinstance(v, torch.Tensor):
+            batch[k] = v.to(device, non_blocking=True)
+        elif isinstance(v, dict):
+            for sk, sv in v.items():
+                if isinstance(sv, torch.Tensor):
+                    batch[k][sk] = sv.to(device, non_blocking=True)
+    return batch
 
 def accuracy(logits: torch.Tensor, targets: torch.Tensor) -> float:
     pred = logits.argmax(dim=1)
     correct = (pred == targets).float().sum().item()
     return correct / max(1, targets.numel())
 
-# ------------------------------------------------------------------ #
-# Encode a batch of transcripts (used only when teacher-forcing is on)
-# ------------------------------------------------------------------ #
-def encode_batch_transcripts(
-    transcripts: List[Dict[str, Any]],
-    tokenizer,
-    max_len: int,
-    device: torch.device,
-) -> torch.Tensor:
+def encode_batch_transcripts(transcripts, tokenizer, max_len: int, device: torch.device) -> torch.Tensor:
+    """Pad-only when empty, else standard encode (T5 tokenizer)."""
     ids = []
+    pad = tokenizer.pad_token_id
     for tr in transcripts:
-        txt = tr.get("text", "")
-        enc = tokenizer(
-            txt,
-            max_length=max_len,
-            truncation=True,
-            padding="max_length",
-            return_tensors="pt",
-        )
-        ids.append(enc.input_ids.squeeze(0))
+        txt = (tr.get("text") or "").strip()
+        if not txt:
+            ids.append(torch.full((max_len,), pad, dtype=torch.long))
+        else:
+            enc = tokenizer(
+                txt, max_length=max_len, truncation=True,
+                padding="max_length", return_tensors="pt"
+            )
+            ids.append(enc.input_ids.squeeze(0))
     return torch.stack(ids).to(device)
 
-# ------------------------------------------------------------------ #
-# One epoch (train / val)
-# ------------------------------------------------------------------ #
+
+# --------- Train / Val loops ----------
 def run_one_epoch(
     model: TMRNN,
     loader,
-    tokenizer,
     cfg: Dict[str, Any],
     device: torch.device,
     optimizer: Optional[torch.optim.Optimizer] = None,
     train: bool = True,
-) -> Tuple[float, float, float]:
+) -> Tuple[float, float, float, float]:
+    """
+    Returns (avg_total_loss, avg_cls_loss, avg_txt_loss, acc)
+    """
     model.train(train)
-    ce_cls = nn.CrossEntropyLoss(label_smoothing=float(cfg["train"].get("label_smoothing", 0.0)))
-    total_loss = total_cls = total_txt = n = 0.0
+    ce_cls = nn.CrossEntropyLoss(label_smoothing=float(cfg["train"].get("label_smoothing", 0.0))) if train else nn.CrossEntropyLoss()
 
-    for batch in tqdm(loader, disable=not train, leave=False):
-        # -------------------------------------------------------------- #
-        # Move everything to device
-        # -------------------------------------------------------------- #
-        for k, v in batch.items():
-            if isinstance(v, torch.Tensor):
-                batch[k] = v.to(device, non_blocking=True)
-            elif isinstance(v, dict):
-                for sk, sv in v.items():
-                    if isinstance(sv, torch.Tensor):
-                        batch[k][sk] = sv.to(device, non_blocking=True)
+    total_loss = total_cls = total_txt = 0.0
+    total_correct = 0
+    total_seen = 0
 
-        # -------------------------------------------------------------- #
-        # Teacher-forcing transcript input (only if both flags allow it)
-        # -------------------------------------------------------------- #
+    it = tqdm(loader, disable=not train, leave=False)
+    for batch in it:
+        batch = _move_to_device(batch, device)
+
+        # Teacher forcing only when training and text head enabled
         transcripts_ids = None
-        if model.use_teacher_forcing and model.enable_text_head:
+        if train and model.enable_text_head and model.use_teacher_forcing and (model.tok is not None):
             transcripts_ids = encode_batch_transcripts(
-                batch["transcripts"],
-                tokenizer,
-                cfg["train"]["max_txt_len"],
-                device,
+                batch["transcripts"], model.tok, int(cfg["train"]["max_txt_len"]), device
             )
 
-        # -------------------------------------------------------------- #
-        # Forward
-        # -------------------------------------------------------------- #
         cls_logits, txt_logits = model(batch, transcripts_ids=transcripts_ids)
-
-        y = batch["labels"]["single_index"]
+        y = batch["labels"]["single_index"].view(-1)
 
         loss_cls = ce_cls(cls_logits, y)
         loss_txt = torch.tensor(0.0, device=device)
-
-        if txt_logits is not None and transcripts_ids is not None:
-            pad_id = tokenizer.pad_token_id
+        if train and txt_logits is not None and transcripts_ids is not None:
+            pad_id = model.tok.pad_token_id
             loss_fct = nn.CrossEntropyLoss(ignore_index=pad_id)
             loss_txt = loss_fct(
-                txt_logits.view(-1, txt_logits.size(-1)),
-                transcripts_ids[:, 1:].reshape(-1),   # shift-right target
+                txt_logits.reshape(-1, txt_logits.size(-1)),
+                transcripts_ids.reshape(-1)
             )
-
-        loss = loss_cls + float(cfg["train"]["lambda_txt"]) * loss_txt
+        loss = loss_cls + float(cfg["train"].get("lambda_txt", 1.0)) * loss_txt
 
         if train and optimizer is not None:
             optimizer.zero_grad(set_to_none=True)
@@ -163,71 +129,127 @@ def run_one_epoch(
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
 
-        total_loss += loss.item()
-        total_cls  += loss_cls.item()
-        total_txt  += loss_txt.item()
-        n += 1
+        total_loss += float(loss)
+        total_cls  += float(loss_cls)
+        total_txt  += float(loss_txt)
 
-    return (
-        total_loss / max(1, n),
-        total_cls  / max(1, n),
-        total_txt  / max(1, n),
-    )
+        with torch.no_grad():
+            preds = cls_logits.argmax(dim=1)
+            total_correct += (preds == y).float().sum().item()
+            total_seen    += y.numel()
 
-# ------------------------------------------------------------------ #
-# Main
-# ------------------------------------------------------------------ #
+    denom = max(1, len(loader))
+    acc = total_correct / max(1, total_seen)
+    return total_loss / denom, total_cls / denom, total_txt / denom, acc
+
+
+@torch.no_grad()
+def evaluate_epoch(
+    model: TMRNN,
+    loader,
+    device: torch.device,
+    tta_hflip: bool = True,
+) -> Tuple[float, float, Optional[float], Optional[np.ndarray]]:
+    """
+    Returns: (avg_loss, avg_acc, macro_auc (or None), per_class_auc (or None))
+    """
+    model.eval()
+    ce = nn.CrossEntropyLoss()
+    total_loss, total_acc, n = 0.0, 0.0, 0
+
+    compute_auc = HAS_SK
+    if compute_auc:
+        all_probs, all_y = [], []
+
+    for batch in loader:
+        batch = _move_to_device(batch, device)
+        logits, _ = model(batch)
+
+        if tta_hflip:
+            # Only flip images; keep sequence streams intact
+            batch_tta = dict(batch)
+            batch_tta["images"] = batch["images"].flip(dims=[-1])  # HFlip width dim
+            logits_tta, _ = model(batch_tta)
+            logits = (logits + logits_tta) * 0.5
+
+        y = batch["labels"]["single_index"].view(-1)
+        loss = ce(logits, y)
+        acc = accuracy(logits, y)
+
+        bsz = y.size(0)
+        total_loss += loss.item() * bsz
+        total_acc  += acc * bsz
+        n += bsz
+
+        if compute_auc:
+            probs = torch.softmax(logits, dim=1).detach().cpu().numpy()
+            all_probs.append(probs)
+            all_y.append(y.detach().cpu().numpy())
+
+    macro_auc, per_class_auc = None, None
+    if compute_auc and n > 0:
+        probs = np.concatenate(all_probs, axis=0)
+        y = np.concatenate(all_y, axis=0)
+        try:
+            macro_auc = roc_auc_score(y, probs, multi_class="ovr")
+            C = probs.shape[1]
+            y_1hot = np.eye(C)[y]
+            aucs = []
+            for c in range(C):
+                if y_1hot[:, c].sum() > 0 and y_1hot[:, c].sum() < len(y):
+                    aucs.append(roc_auc_score(y_1hot[:, c], probs[:, c]))
+                else:
+                    aucs.append(np.nan)
+            per_class_auc = np.array(aucs)
+        except Exception:
+            macro_auc, per_class_auc = None, None
+
+    return total_loss / max(1, n), total_acc / max(1, n), macro_auc, per_class_auc
+
+
+# ------------------ Main -----------------
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=Path, required=True)
-    parser.add_argument("--seed", type=int, default=2025)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--config", type=Path, required=True)
+    ap.add_argument("--seed", type=int, default=2025)
 
-    # ------------------- NEW CLI FLAGS ------------------- #
-    parser.add_argument(
-        "--image_backbone",
-        type=str,
-        default="resnet50",
-        choices=["resnet18", "resnet50", "densenet121", "txrv_densenet121"],
-        help="Image encoder backbone",
-    )
-    parser.add_argument("--no_gaze", action="store_true", help="Disable gaze embedding")
-    parser.add_argument("--no_roi", action="store_true", help="Disable ROI (seg+box) projection")
-    parser.add_argument(
-        "--no_text",
-        action="store_true",
-        help="Do NOT feed transcript tokens during training (no teacher-forcing)",
-    )
-    parser.add_argument(
-        "--no_text_decode",
-        action="store_true",
-        help="Completely disable the text decoder head (classification-only)",
-    )
-    # ----------------------------------------------------- #
+    # parity with CNN switches
+    ap.add_argument("--image_backbone", type=str, default=None,
+                    choices=["resnet18", "resnet50", "densenet121", "txrv_densenet121"])
+    ap.add_argument("--freeze_backbone", action="store_true")
+    ap.add_argument("--unfreeze_after", type=int, default=5, help="Unfreeze backbone after N epochs (0=disabled)")
 
-    args = parser.parse_args()
+    # modality toggles (optional)
+    ap.add_argument("--no_gaze", action="store_true")
+    ap.add_argument("--no_roi", action="store_true")
+    ap.add_argument("--no_text", action="store_true", help="disable teacher-forcing")
+    ap.add_argument("--no_text_decode", action="store_true", help="disable the text head entirely")
+
+    args = ap.parse_args()
     set_seed(args.seed)
 
     cfg: Dict[str, Any] = yaml.safe_load(args.config.read_text(encoding="utf-8"))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # Resolve split dir robustly
     project_root = Path(__file__).resolve().parent
     config_dir = args.config.parent.resolve()
-    print(f"[INFO] Using config file: {args.config}\n[INFO] Config directory: {config_dir}")
-    in_paths = cfg["input_path"]
     split_dir_raw = Path(cfg["split_files"]["dir"])
-    # If relative and starts with 'configs/', interpret as from project root (not config_dir)
-    if not split_dir_raw.is_absolute() and str(split_dir_raw).startswith("configs/"):
-        split_dir = (project_root / split_dir_raw).resolve()
+    if split_dir_raw.is_absolute():
+        split_dir = split_dir_raw
     else:
-        split_dir = (split_dir_raw if split_dir_raw.is_absolute() else (config_dir / split_dir_raw)).resolve()
-    print(f"[INFO] Split dir resolved to: {split_dir}")
+        first = split_dir_raw.parts[0] if split_dir_raw.parts else ""
+        if first.startswith("configs"):
+            split_dir = (project_root / split_dir_raw).resolve()
+        else:
+            split_dir = (config_dir / split_dir_raw).resolve()
 
     train_ids = read_split_ids(split_dir, "train")
     val_ids   = read_split_ids(split_dir, "val")
-    test_ids  = read_split_ids(split_dir, "test")
+    test_ids  = read_split_ids(split_dir, "test") if (split_dir / "test_ids.txt").exists() else None
 
-    # ------------------------------------------------------------------ #
-    # Datasets
-    # ------------------------------------------------------------------ #
+    # Datasets / loaders
+    in_paths = cfg["input_path"]
     common_kwargs = dict(
         root=Path(in_paths["gaze_raw"]),
         seg_path=Path(in_paths["segmentation_dir"]),
@@ -239,113 +261,160 @@ def main() -> None:
     )
     train_ds = EGDCXRDataset(**common_kwargs, case_ids=train_ids)
     val_ds   = EGDCXRDataset(**common_kwargs, case_ids=val_ids)
+    test_ds  = EGDCXRDataset(**common_kwargs, case_ids=test_ids) if test_ids is not None else None
 
-    # ------------------------------------------------------------------ #
-    # Vocabulary (only needed if text head is enabled)
-    # ------------------------------------------------------------------ #
-    vocab = None
-    if not args.no_text_decode:
-        vocab = build_vocabulary(train_ds, min_freq=2)
-
-    # ------------------------------------------------------------------ #
-    # Dataloaders
-    # ------------------------------------------------------------------ #
-    bs = cfg["train"]["batch_size"]
-    nw = cfg["train"]["num_workers"]
+    bs = int(cfg["train"]["batch_size"]); nw = int(cfg["train"]["num_workers"])
     sampler = None
     if cfg["train"].get("use_weighted_sampler", False):
         w = train_ds.sample_weights()
-        sampler = WeightedRandomSampler(w, len(w), replacement=True)
+        sampler = WeightedRandomSampler(w.double(), len(w), replacement=True)
 
     train_loader = create_dataloader(train_ds, batch_size=bs, shuffle=(sampler is None), sampler=sampler, num_workers=nw)
     val_loader   = create_dataloader(val_ds,   batch_size=bs, shuffle=False, num_workers=nw)
+    test_loader  = create_dataloader(test_ds,  batch_size=bs, shuffle=False, num_workers=nw) if test_ds is not None else None
 
-    # ------------------------------------------------------------------ #
-    # Model – pass CLI flags
-    # ------------------------------------------------------------------ #
-    num_seg = getattr(train_ds, "num_segments", None) or len(train_ds.region_names)
-    num_box = train_ds.num_box_classes
+    # --------------- Model ----------------
+    yaml_backbone = (cfg.get("options") or {}).get("image_backbone", "resnet50")
+    image_backbone = args.image_backbone or yaml_backbone
 
-    # -- get YAML-based options (modality ablation, backbone) --
-    options = cfg["options"] if "options" in cfg else {}
-    # CLI override
-    model_kwargs = dict(
-        num_seg=num_seg,
-        num_box=num_box,
+    model = TMRNN(
+        num_seg=getattr(train_ds, "num_segments", None) or len(train_ds.region_names),
+        num_box=train_ds.num_box_classes,
         d_g=cfg["model"]["d_g"],
         d_r=cfg["model"]["d_s"],
         d_img=cfg["model"]["d_img"],
         d_h=cfg["model"]["d_h"],
         num_classes=len(cfg["train"]["classes"]),
+        image_backbone=image_backbone,
+        use_gaze=not args.no_gaze,
+        use_roi=not args.no_roi,
+        enable_text_head=not args.no_text_decode,
+        use_teacher_forcing=not args.no_text,
+    ).to(device)
+
+    # Optional freeze at start
+    if args.freeze_backbone:
+        for p in model.img_encoder.parameters():
+            p.requires_grad = False
+
+    # Vocab meta (for completeness if text head on)
+    if model.enable_text_head:
+        (Path(cfg["output_path"]["checkpoint_dir"]) / "meta").mkdir(parents=True, exist_ok=True)
+        with (Path(cfg["output_path"]["checkpoint_dir"]) / "meta" / "tok.txt").open("w") as f:
+            f.write(model.tok.name_or_path if model.tok is not None else "none")
+
+    # ---------- Optimizer (2 groups: smaller LR for backbone) ----------
+    base_lr = float(cfg["train"]["lr"])
+    wd = float(cfg["train"]["weight_decay"])
+    backbone_lr_mult = float(cfg["train"].get("backbone_lr_mult", 0.1))
+
+    head_params = list(model.img_proj.parameters()) + list(model.encoder.parameters()) + \
+                  list(model.cls_head.parameters())
+    if model.use_gaze:
+        head_params += list(model.gaze_mlp.parameters())
+    if model.use_roi:
+        head_params += list(model.roi_proj.parameters())
+    if model.use_attn_pool:
+        head_params += list(model.attn_pool.parameters())
+    if model.enable_text_head and model.h_to_t5 is not None:
+        head_params += list(model.h_to_t5.parameters())
+
+    backbone_params = [p for p in model.img_encoder.parameters() if p.requires_grad]
+
+    opt = AdamW(
+        [
+            {"params": backbone_params, "lr": base_lr * backbone_lr_mult},
+            {"params": head_params,     "lr": base_lr},
+        ],
+        weight_decay=wd
     )
-    def getopt(k, default=None):
-        # CLI has highest precedence
-        if hasattr(args, k) and getattr(args, k) is not None: return getattr(args, k)
-        return options.get(k, default)
-    model_kwargs.update({
-        "image_backbone": getopt("image_backbone", "resnet50"),
-        "use_gaze": not getattr(args, "no_gaze", False),
-        "use_roi": not getattr(args, "no_roi", False),
-        "enable_text_head": not getattr(args, "no_text_decode", False),
-        "use_teacher_forcing": not getattr(args, "no_text", False),
-    })
-    # Only pass allowed kwargs for target TMRNN
-    import inspect
-    allowed_args = inspect.signature(TMRNN.__init__).parameters.keys()
-    model_kwargs_filtered = {k: v for k, v in model_kwargs.items() if k in allowed_args}
-    model = TMRNN(**model_kwargs_filtered)
 
-    # ------------------------------------------------------------------ #
-    # Optimizer & losses
-    # ------------------------------------------------------------------ #
-    opt = AdamW(model.parameters(), lr=cfg["train"]["lr"], weight_decay=cfg["train"]["weight_decay"])
+    # ---------- OneCycleLR (per-batch) ----------
+    from torch.optim.lr_scheduler import OneCycleLR
+    epochs   = int(cfg["train"]["epochs"])
+    steps_per_epoch = max(1, math.ceil(len(train_loader)))
+    scheduler = OneCycleLR(
+        opt, max_lr=[base_lr * backbone_lr_mult, base_lr],
+        epochs=epochs, steps_per_epoch=steps_per_epoch,
+        pct_start=0.1, div_factor=10.0, final_div_factor=100.0
+    )
 
-    # ------------------------------------------------------------------ #
-    # Training loop with early stopping
-    # ------------------------------------------------------------------ #
-    epochs = cfg["train"]["epochs"]
-    patience = cfg["train"].get("patience", 8)
-    best_val = float("inf")
-    bad = 0
-    ckpt_dir = Path(cfg["output_path"]["checkpoint_dir"])
-    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    # ------------- Train / Early stop (by macro-AUC) -----
+    patience = int(cfg["train"].get("patience", 10))
+    tta_hflip = bool(cfg["train"].get("tta_hflip", True))
+    ckpt_dir = Path(cfg["output_path"]["checkpoint_dir"]); ckpt_dir.mkdir(parents=True, exist_ok=True)
     best_path = ckpt_dir / (cfg["output_path"].get("best_ckpt_name") or "tmrnn_best.pt")
 
-    # Save vocab (if any)
-    if vocab is not None:
-        (ckpt_dir / "meta").mkdir(parents=True, exist_ok=True)
-        with (ckpt_dir / "meta" / "vocab.json").open("w") as f:
-            json.dump(dict(word2idx=vocab.word2idx), f, indent=2)
+    best_key = -float("inf")  # macroAUC
+    bad = 0
 
     for ep in range(1, epochs + 1):
-        tr_loss, tr_cls, tr_txt = run_one_epoch(
-            model, train_loader, model.tok if hasattr(model, "tok") else None,
-            cfg, model.device, optimizer, train=True
-        )
-        va_loss, va_cls, va_txt = run_one_epoch(
-            model, val_loader, None, cfg, model.device, train=False
-        )
+        # staged unfreeze
+        if args.unfreeze_after > 0 and ep == args.unfreeze_after + 1:
+            for p in model.img_encoder.parameters():
+                p.requires_grad = True
+            # rebuild optimizer w/ new requires_grad
+            backbone_params = [p for p in model.img_encoder.parameters() if p.requires_grad]
+            opt = AdamW(
+                [
+                    {"params": backbone_params, "lr": base_lr * backbone_lr_mult},
+                    {"params": head_params,     "lr": base_lr},
+                ],
+                weight_decay=wd
+            )
+            scheduler = OneCycleLR(
+                opt, max_lr=[base_lr * backbone_lr_mult, base_lr],
+                epochs=epochs, steps_per_epoch=steps_per_epoch,
+                pct_start=0.1, div_factor=10.0, final_div_factor=100.0
+            )
+            print(f"[Epoch {ep:02d}] Unfroze backbone")
 
-        print(f"[Epoch {ep:02d}] "
-              f"train loss={tr_loss:.4f} (cls={tr_cls:.4f}, txt={tr_txt:.4f}) | "
-              f"val   loss={va_loss:.4f} (cls={va_cls:.4f}, txt={va_txt:.4f})")
+        # train (scheduler per batch)
+        tr_loss, tr_cls, tr_txt, tr_acc = run_one_epoch(model, train_loader, cfg, device, optimizer=opt, train=True)
+        # manually step OneCycleLR per batch already; nothing here
 
-        if va_loss < best_val:
-            best_val = va_loss
+        # val
+        va_loss, va_acc, va_auc, va_aucs = evaluate_epoch(model, val_loader, device, tta_hflip=tta_hflip)
+
+        # ----- Clean, 2-line logging -----
+        print(f"[Epoch {ep:02d}] TRAIN  loss={tr_loss:.4f}  acc={tr_acc:.3f}  (cls={tr_cls:.4f}, txt={tr_txt:.4f})")
+        if va_auc is not None and va_aucs is not None:
+            va_aucs_str = ",".join([f"{x:.3f}" if not np.isnan(x) else "nan" for x in va_aucs.tolist()])
+            print(f"[Epoch {ep:02d}] VAL    loss={va_loss:.4f}  acc={va_acc:.3f}  macroAUC={va_auc:.3f}  perClassAUC=[{va_aucs_str}]")
+        else:
+            print(f"[Epoch {ep:02d}] VAL    loss={va_loss:.4f}  acc={va_acc:.3f}")
+
+        # ----- Save best by macro-AUC (fallback to loss if AUC None) -----
+        current_key = va_auc if (va_auc is not None) else (-va_loss)
+        if current_key > best_key:
+            best_key = current_key
             bad = 0
             torch.save({
                 "model": model.state_dict(),
                 "cfg": cfg,
                 "epoch": ep,
-                "val_loss": best_val,
-                "vocab": getattr(vocab, "word2idx", None),
+                "val_metric": float(best_key),
+                "backbone": image_backbone,
             }, best_path)
-            print(f"  → Saved best checkpoint: {best_path}")
+            print(f"  → Saved best checkpoint (by macroAUC): {best_path}")
         else:
             bad += 1
             if bad >= patience:
-                print(f"Early stopping after {patience} epochs without improvement.")
+                print(f"Early stopping (no macroAUC improvement for {patience} epochs).")
                 break
+
+    # ----- TEST on best checkpoint -----
+    if test_loader is not None and best_path.exists():
+        ckpt = torch.load(best_path, map_location=device)
+        model.load_state_dict(ckpt["model"], strict=True)
+        te_loss, te_acc, te_auc, te_aucs = evaluate_epoch(model, test_loader, device, tta_hflip=tta_hflip)
+        if te_auc is not None and te_aucs is not None:
+            te_aucs_str = ",".join([f"{x:.3f}" if not np.isnan(x) else "nan" for x in te_aucs.tolist()])
+            print(f"[Test] LOSS={te_loss:.4f}  ACC={te_acc:.3f}  macroAUC={te_auc:.3f}  perClassAUC=[{te_aucs_str}]")
+        else:
+            print(f"[Test] LOSS={te_loss:.4f}  ACC={te_acc:.3f}")
+    else:
+        print("[Test] Skipped (no test split or no best checkpoint).")
 
     print("Training finished.")
 

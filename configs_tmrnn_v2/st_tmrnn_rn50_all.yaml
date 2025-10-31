@@ -1,0 +1,45 @@
+dataset_name: "egd-cxr"
+
+input_path:
+  gaze_raw: /project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0
+  dicom_raw: /project/hnguyen2/mvu9/datasets/gaze_data/egd-cxr/dicom_raw
+  segmentation_dir: /project/hnguyen2/mvu9/datasets/gaze_data/physionet.org/files/egd-cxr/1.0.0/audio_segmentation_transcripts
+  transcripts_dir: /project/hnguyen2/mvu9/datasets/gaze_data/egd-cxr/transcripts
+
+split_files:
+  dir: configs_tmrnn_v2/splits  # train_ids.txt, val_ids.txt, test_ids.txt
+
+train:
+  classes: ["CHF", "pneumonia", "Normal"]
+  batch_size: 32
+  epochs: 50
+  max_fixations: 8
+  num_workers: 2
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  label_smoothing: 0.05
+  patience: 10
+  use_weighted_sampler: true
+  lambda_txt: 1.0
+  max_txt_len: 64
+  # parity with CNN trainer
+  tta_hflip: true
+  backbone_lr_mult: 0.1
+
+model:
+  d_g: 64     # gaze embed
+  d_s: 64     # roi (seg+box) embed
+  d_img: 128  # image projection
+  d_h: 256    # GRU hidden
+
+output_path:
+  checkpoint_dir: runs/checkpoints_ver7/tmrnn_rn50_full
+  best_ckpt_name: tmrnn_rn50_full.pt
+
+options:
+  image_backbone: resnet50
+  use_gaze: true
+  use_roi: true
+  enable_text_head: true
+  use_teacher_forcing: true
+ 

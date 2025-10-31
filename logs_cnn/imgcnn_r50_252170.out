@@ -1,0 +1,68 @@
+Starting training at: Fri Oct 31 05:54:36 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 219 cases | regions=4 | bbox_classes=17
+Starting with frozen backbone; will unfreeze after epoch 5
+[Epoch 01] TRAIN  loss=1.1046  acc=0.339
+[Epoch 01] VAL    loss=1.1085  acc=0.327  macroAUC=0.468  perClassAUC=[0.370,0.568,0.467]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 02] TRAIN  loss=1.0997  acc=0.358
+[Epoch 02] VAL    loss=1.0982  acc=0.318  macroAUC=0.557  perClassAUC=[0.469,0.588,0.615]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 03] TRAIN  loss=1.0876  acc=0.393
+[Epoch 03] VAL    loss=1.0955  acc=0.346  macroAUC=0.552  perClassAUC=[0.548,0.521,0.585]
+[Epoch 04] TRAIN  loss=1.0722  acc=0.437
+[Epoch 04] VAL    loss=1.0963  acc=0.336  macroAUC=0.555  perClassAUC=[0.573,0.489,0.603]
+[Epoch 05] TRAIN  loss=1.0716  acc=0.427
+[Epoch 05] VAL    loss=1.0853  acc=0.374  macroAUC=0.612  perClassAUC=[0.694,0.487,0.654]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 06] Unfreezing backbone
+[Epoch 06] TRAIN  loss=1.0468  acc=0.511
+[Epoch 06] VAL    loss=1.0734  acc=0.393  macroAUC=0.656  perClassAUC=[0.735,0.537,0.696]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 07] TRAIN  loss=1.0368  acc=0.524
+[Epoch 07] VAL    loss=1.0613  acc=0.495  macroAUC=0.689  perClassAUC=[0.771,0.564,0.732]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 08] TRAIN  loss=1.0053  acc=0.602
+[Epoch 08] VAL    loss=1.0359  acc=0.458  macroAUC=0.736  perClassAUC=[0.799,0.637,0.772]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 09] TRAIN  loss=0.9327  acc=0.734
+[Epoch 09] VAL    loss=1.0109  acc=0.514  macroAUC=0.753  perClassAUC=[0.799,0.641,0.818]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 10] TRAIN  loss=0.8306  acc=0.795
+[Epoch 10] VAL    loss=0.9609  acc=0.551  macroAUC=0.737  perClassAUC=[0.812,0.583,0.815]
+[Epoch 11] TRAIN  loss=0.7023  acc=0.831
+[Epoch 11] VAL    loss=0.9462  acc=0.523  macroAUC=0.751  perClassAUC=[0.813,0.622,0.818]
+[Epoch 12] TRAIN  loss=0.6133  acc=0.886
+[Epoch 12] VAL    loss=0.9231  acc=0.533  macroAUC=0.750  perClassAUC=[0.821,0.615,0.812]
+[Epoch 13] TRAIN  loss=0.4736  acc=0.923
+[Epoch 13] VAL    loss=0.9408  acc=0.514  macroAUC=0.741  perClassAUC=[0.806,0.612,0.805]
+[Epoch 14] TRAIN  loss=0.3715  acc=0.962
+[Epoch 14] VAL    loss=0.9063  acc=0.551  macroAUC=0.759  perClassAUC=[0.808,0.653,0.816]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 15] TRAIN  loss=0.2981  acc=0.987
+[Epoch 15] VAL    loss=0.9467  acc=0.514  macroAUC=0.755  perClassAUC=[0.804,0.651,0.811]
+[Epoch 16] TRAIN  loss=0.2398  acc=0.993
+[Epoch 16] VAL    loss=0.9282  acc=0.561  macroAUC=0.761  perClassAUC=[0.798,0.672,0.815]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 17] TRAIN  loss=0.2153  acc=0.992
+[Epoch 17] VAL    loss=0.9421  acc=0.579  macroAUC=0.760  perClassAUC=[0.807,0.657,0.817]
+[Epoch 18] TRAIN  loss=0.1969  acc=0.997
+[Epoch 18] VAL    loss=0.9536  acc=0.551  macroAUC=0.747  perClassAUC=[0.800,0.649,0.794]
+[Epoch 19] TRAIN  loss=0.1879  acc=1.000
+[Epoch 19] VAL    loss=0.9344  acc=0.570  macroAUC=0.766  perClassAUC=[0.803,0.661,0.833]
+  → Saved best checkpoint (by macroAUC): runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 20] TRAIN  loss=0.1831  acc=0.999
+[Epoch 20] VAL    loss=0.9590  acc=0.533  macroAUC=0.752  perClassAUC=[0.785,0.658,0.812]
+[Epoch 21] TRAIN  loss=0.1853  acc=0.997
+[Epoch 21] VAL    loss=0.9507  acc=0.561  macroAUC=0.751  perClassAUC=[0.811,0.623,0.819]
+[Epoch 22] TRAIN  loss=0.1818  acc=1.000
+[Epoch 22] VAL    loss=0.9792  acc=0.523  macroAUC=0.732  perClassAUC=[0.760,0.620,0.816]
+[Epoch 23] TRAIN  loss=0.1822  acc=1.000
+[Epoch 23] VAL    loss=0.9300  acc=0.579  macroAUC=0.761  perClassAUC=[0.812,0.644,0.827]
+[Epoch 24] TRAIN  loss=0.1806  acc=1.000
+[Epoch 24] VAL    loss=0.9484  acc=0.551  macroAUC=0.754  perClassAUC=[0.797,0.633,0.831]
+[Epoch 25] TRAIN  loss=0.1804  acc=1.000
+[Epoch 25] VAL    loss=0.9759  acc=0.570  macroAUC=0.753  perClassAUC=[0.794,0.663,0.801]
+[Epoch 26] TRAIN  loss=0.1799  acc=1.000
+[Epoch 26] VAL    loss=0.9861  acc=0.523  macroAUC=0.740  perClassAUC=[0.793,0.638,0.788]

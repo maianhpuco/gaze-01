@@ -18,7 +18,7 @@ train:
   lr: 3.0e-4
   weight_decay: 1.0e-4
   label_smoothing: 0.05
-  patience: 5
+  patience: 20
   use_weighted_sampler: true
   lambda_txt: 1.0
   max_txt_len: 64

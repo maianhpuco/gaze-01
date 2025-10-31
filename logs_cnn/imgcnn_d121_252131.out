@@ -1,0 +1,29 @@
+Starting training at: Thu Oct 30 05:45:02 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 219 cases | regions=4 | bbox_classes=17
+[Epoch 01] train: loss=0.7879 acc=0.644 | val:   loss=1.0104 acc=0.561
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 02] train: loss=0.5991 acc=0.787 | val:   loss=0.9486 acc=0.533
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 03] train: loss=0.4131 acc=0.894 | val:   loss=1.1510 acc=0.570
+[Epoch 04] train: loss=0.3355 acc=0.938 | val:   loss=1.3755 acc=0.579
+[Epoch 05] train: loss=0.3453 acc=0.933 | val:   loss=1.1926 acc=0.626
+[Epoch 06] train: loss=0.3473 acc=0.915 | val:   loss=1.4162 acc=0.617
+[Epoch 07] train: loss=0.2846 acc=0.952 | val:   loss=1.2335 acc=0.570
+[Epoch 08] train: loss=0.2609 acc=0.975 | val:   loss=0.9097 acc=0.664
+  → Saved best checkpoint: runs/checkpoints/imgcnn_d121/cnn_d121_best.pt
+[Epoch 09] train: loss=0.2548 acc=0.968 | val:   loss=1.1620 acc=0.598
+[Epoch 10] train: loss=0.2462 acc=0.971 | val:   loss=0.9854 acc=0.645
+[Epoch 11] train: loss=0.2183 acc=0.987 | val:   loss=1.3801 acc=0.533
+[Epoch 12] train: loss=0.2257 acc=0.983 | val:   loss=1.0236 acc=0.617
+[Epoch 13] train: loss=0.2502 acc=0.966 | val:   loss=1.9811 acc=0.383
+[Epoch 14] train: loss=0.2321 acc=0.981 | val:   loss=0.9646 acc=0.654
+[Epoch 15] train: loss=0.2127 acc=0.989 | val:   loss=0.9967 acc=0.692
+[Epoch 16] train: loss=0.2057 acc=0.991 | val:   loss=1.0519 acc=0.636
+[Epoch 17] train: loss=0.2135 acc=0.985 | val:   loss=1.0499 acc=0.636
+[Epoch 18] train: loss=0.2072 acc=0.985 | val:   loss=1.5256 acc=0.589
+Early stopping (no improvement for 10 epochs).
+[Test] loss=1.4018 acc=0.653
+Training finished.
+Finished at: Thu Oct 30 06:30:46 AM CDT 2025

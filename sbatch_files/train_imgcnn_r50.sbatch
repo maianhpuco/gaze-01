@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=imgcnn_r50
-#SBATCH --output=logs_tmrnn_v2/imgcnn_r50_%j.out
-#SBATCH --error=logs_tmrnn_v2/imgcnn_r50_%j.err
+#SBATCH --output=logs_cnn/imgcnn_r50_%j.out
+#SBATCH --error=logs_cnn/imgcnn_r50_%j.err
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G
@@ -9,7 +9,7 @@
 
 
 set -euo pipefail
-mkdir -p logs_tmrnn_v2
+mkdir -p logs_cnn
 
 export HF_HOME=/project/hnguyen2/mvu9/.cache/huggingface
 export HF_HUB_DISABLE_TELEMETRY=1
@@ -21,5 +21,5 @@ unset HUGGINGFACE_HUB_TOKEN
 
 cd /project/hnguyen2/mvu9/folder_04_ma/gaze-01
 echo "Starting training at: $(date)"
-srun python -u main_train_cnn.py --config configs_tmrnn_v2/st_imgcnn_rn50.yaml
+srun python -u main_train_cnn.py --config configs_tmrnn_v2/st_imgcnn_rn50.yaml --freeze_backbone --no_proj 
 echo "Finished at: $(date)" 

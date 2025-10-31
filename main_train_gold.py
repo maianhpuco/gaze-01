@@ -16,7 +16,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from src.models.tmrnn import TMRNN
+from src.models.tmrnn_gold import TMRNN
 from egd_cxr_dataset.datasets.egd_cxr import EGDCXRDataset, create_dataloader  # type: ignore
 from transformers import T5Tokenizer
 

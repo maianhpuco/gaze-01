@@ -71,3 +71,14 @@ check_data:
 train_full_adv:
 	python main_train.py --config configs/st_tmrnn.yaml 
 
+all_cnn:
+	sbatch sbatch_files/train_imgcnn_r18.sbatch
+	sbatch sbatch_files/train_imgcnn_r50.sbatch
+	sbatch sbatch_files/train_imgcnn_d121.sbatch
+	sbatch sbatch_files/train_imgcnn_txrvd121.sbatch 
+
+tmrnn: 
+	sbatch sbatch_files/train_tmrnn_r18.sbatch
+	sbatch sbatch_files/train_tmrnn_r50.sbatch
+	sbatch sbatch_files/train_tmrnn_d121.sbatch
+	sbatch sbatch_files/train_tmrnn_txrvd121.sbatch 

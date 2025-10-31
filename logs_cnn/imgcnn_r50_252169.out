@@ -1,0 +1,504 @@
+Starting training at: Fri Oct 31 05:16:00 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 219 cases | regions=4 | bbox_classes=17
+Starting with frozen backbone; will unfreeze after epoch 5
+[Epoch 01] train: loss=1.0901 acc=0.377 | val: loss=1.1037 acc=0.374 macroAUC=0.492
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.000     0.000     0.000        35
+   pneumonia      0.371     0.917     0.528        36
+      Normal      0.438     0.194     0.269        36
+
+    accuracy                          0.374       107
+   macro avg      0.269     0.370     0.266       107
+weighted avg      0.272     0.374     0.268       107
+
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 02] train: loss=1.0670 acc=0.509 | val: loss=1.0919 acc=0.430 macroAUC=0.586
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      1.000     0.029     0.056        35
+   pneumonia      0.400     0.667     0.500        36
+      Normal      0.457     0.583     0.512        36
+
+    accuracy                          0.430       107
+   macro avg      0.619     0.426     0.356       107
+weighted avg      0.615     0.430     0.359       107
+
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 03] train: loss=1.0347 acc=0.586 | val: loss=1.0885 acc=0.364 macroAUC=0.593
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.333     0.029     0.053        35
+   pneumonia      0.333     0.861     0.481        36
+      Normal      0.636     0.194     0.298        36
+
+    accuracy                          0.364       107
+   macro avg      0.434     0.361     0.277       107
+weighted avg      0.435     0.364     0.279       107
+
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 04] train: loss=1.0164 acc=0.562 | val: loss=1.0861 acc=0.327 macroAUC=0.608
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.000     0.000     0.000        35
+   pneumonia      0.323     0.889     0.474        36
+      Normal      0.750     0.083     0.150        36
+
+    accuracy                          0.327       107
+   macro avg      0.358     0.324     0.208       107
+weighted avg      0.361     0.327     0.210       107
+
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 05] train: loss=1.0005 acc=0.589 | val: loss=1.0687 acc=0.467 macroAUC=0.659
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.545     0.171     0.261        35
+   pneumonia      0.412     0.583     0.483        36
+      Normal      0.511     0.639     0.568        36
+
+    accuracy                          0.467       107
+   macro avg      0.489     0.465     0.437       107
+weighted avg      0.489     0.467     0.439       107
+
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 06] Unfreezing backbone
+[Epoch 06] train: loss=0.7781 acc=0.687 | val: loss=0.8495 acc=0.598 macroAUC=0.789
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.750     0.600     0.667        35
+   pneumonia      0.469     0.639     0.541        36
+      Normal      0.667     0.556     0.606        36
+
+    accuracy                          0.598       107
+   macro avg      0.629     0.598     0.605       107
+weighted avg      0.628     0.598     0.604       107
+
+  → Saved best checkpoint: runs/checkpoints/imgcnn_r50/cnn_r50_best.pt
+[Epoch 07] train: loss=0.4332 acc=0.884 | val: loss=0.9870 acc=0.551 macroAUC=0.768
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.714     0.429     0.536        35
+   pneumonia      0.447     0.583     0.506        36
+      Normal      0.590     0.639     0.613        36
+
+    accuracy                          0.551       107
+   macro avg      0.584     0.550     0.552       107
+weighted avg      0.582     0.551     0.552       107
+
+[Epoch 08] train: loss=0.3134 acc=0.943 | val: loss=1.1299 acc=0.505 macroAUC=0.726
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.692     0.257     0.375        35
+   pneumonia      0.400     0.500     0.444        36
+      Normal      0.551     0.750     0.635        36
+
+    accuracy                          0.505       107
+   macro avg      0.548     0.502     0.485       107
+weighted avg      0.546     0.505     0.486       107
+
+[Epoch 09] train: loss=0.2780 acc=0.960 | val: loss=1.0064 acc=0.542 macroAUC=0.761
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.733     0.314     0.440        35
+   pneumonia      0.487     0.528     0.507        36
+      Normal      0.528     0.778     0.629        36
+
+    accuracy                          0.542       107
+   macro avg      0.583     0.540     0.525       107
+weighted avg      0.582     0.542     0.526       107
+
+[Epoch 10] train: loss=0.2376 acc=0.979 | val: loss=1.1065 acc=0.523 macroAUC=0.767
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.769     0.286     0.417        35
+   pneumonia      0.444     0.778     0.566        36
+      Normal      0.581     0.500     0.537        36
+
+    accuracy                          0.523       107
+   macro avg      0.598     0.521     0.507       107
+weighted avg      0.597     0.523     0.507       107
+
+[Epoch 11] train: loss=0.2239 acc=0.985 | val: loss=1.3114 acc=0.505 macroAUC=0.736
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.900     0.257     0.400        35
+   pneumonia      0.419     0.861     0.564        36
+      Normal      0.609     0.389     0.475        36
+
+    accuracy                          0.505       107
+   macro avg      0.643     0.502     0.479       107
+weighted avg      0.640     0.505     0.480       107
+
+[Epoch 12] train: loss=0.2091 acc=0.988 | val: loss=1.1948 acc=0.551 macroAUC=0.760
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.566     0.857     0.682        35
+   pneumonia      0.448     0.361     0.400        36
+      Normal      0.640     0.444     0.525        36
+
+    accuracy                          0.551       107
+   macro avg      0.551     0.554     0.535       107
+weighted avg      0.551     0.551     0.534       107
+
+[Epoch 13] train: loss=0.2047 acc=0.987 | val: loss=0.9777 acc=0.626 macroAUC=0.801
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.656     0.600     0.627        35
+   pneumonia      0.583     0.389     0.467        36
+      Normal      0.627     0.889     0.736        36
+
+    accuracy                          0.626       107
+   macro avg      0.622     0.626     0.610       107
+weighted avg      0.622     0.626     0.610       107
+
+[Epoch 14] train: loss=0.2180 acc=0.980 | val: loss=1.0198 acc=0.561 macroAUC=0.798
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.762     0.457     0.571        35
+   pneumonia      0.449     0.611     0.518        36
+      Normal      0.595     0.611     0.603        36
+
+    accuracy                          0.561       107
+   macro avg      0.602     0.560     0.564       107
+weighted avg      0.600     0.561     0.564       107
+
+[Epoch 15] train: loss=0.2059 acc=0.992 | val: loss=1.1085 acc=0.579 macroAUC=0.767
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.739     0.486     0.586        35
+   pneumonia      0.486     0.500     0.493        36
+      Normal      0.574     0.750     0.651        36
+
+    accuracy                          0.579       107
+   macro avg      0.600     0.579     0.577       107
+weighted avg      0.599     0.579     0.577       107
+
+[Epoch 16] train: loss=0.1877 acc=0.997 | val: loss=1.0604 acc=0.598 macroAUC=0.792
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.889     0.457     0.604        35
+   pneumonia      0.492     0.833     0.619        36
+      Normal      0.643     0.500     0.562        36
+
+    accuracy                          0.598       107
+   macro avg      0.675     0.597     0.595       107
+weighted avg      0.673     0.598     0.595       107
+
+[Epoch 17] train: loss=0.2037 acc=0.992 | val: loss=0.9741 acc=0.636 macroAUC=0.823
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.778     0.600     0.677        35
+   pneumonia      0.619     0.361     0.456        36
+      Normal      0.576     0.944     0.716        36
+
+    accuracy                          0.636       107
+   macro avg      0.658     0.635     0.616       107
+weighted avg      0.657     0.636     0.616       107
+
+[Epoch 18] train: loss=0.1909 acc=0.996 | val: loss=0.9492 acc=0.607 macroAUC=0.814
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.636     0.800     0.709        35
+   pneumonia      0.516     0.444     0.478        36
+      Normal      0.656     0.583     0.618        36
+
+    accuracy                          0.607       107
+   macro avg      0.603     0.609     0.601       107
+weighted avg      0.603     0.607     0.600       107
+
+[Epoch 19] train: loss=0.1921 acc=0.995 | val: loss=1.5775 acc=0.533 macroAUC=0.723
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.923     0.343     0.500        35
+   pneumonia      0.434     1.000     0.605        36
+      Normal      0.818     0.250     0.383        36
+
+    accuracy                          0.533       107
+   macro avg      0.725     0.531     0.496       107
+weighted avg      0.723     0.533     0.496       107
+
+[Epoch 20] train: loss=0.1800 acc=1.000 | val: loss=0.9211 acc=0.645 macroAUC=0.812
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.724     0.600     0.656        35
+   pneumonia      0.611     0.611     0.611        36
+      Normal      0.619     0.722     0.667        36
+
+    accuracy                          0.645       107
+   macro avg      0.651     0.644     0.645       107
+weighted avg      0.651     0.645     0.645       107
+
+[Epoch 21] train: loss=0.1861 acc=0.995 | val: loss=1.2778 acc=0.579 macroAUC=0.782
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.508     0.943     0.660        35
+   pneumonia      0.727     0.222     0.340        36
+      Normal      0.677     0.583     0.627        36
+
+    accuracy                          0.579       107
+   macro avg      0.637     0.583     0.542       107
+weighted avg      0.639     0.579     0.541       107
+
+[Epoch 22] train: loss=0.1970 acc=0.989 | val: loss=1.0597 acc=0.607 macroAUC=0.789
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.765     0.371     0.500        35
+   pneumonia      0.489     0.611     0.543        36
+      Normal      0.667     0.833     0.741        36
+
+    accuracy                          0.607       107
+   macro avg      0.640     0.605     0.595       107
+weighted avg      0.639     0.607     0.596       107
+
+[Epoch 23] train: loss=0.2023 acc=0.989 | val: loss=1.1600 acc=0.551 macroAUC=0.777
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.812     0.371     0.510        35
+   pneumonia      0.424     0.694     0.526        36
+      Normal      0.656     0.583     0.618        36
+
+    accuracy                          0.551       107
+   macro avg      0.631     0.550     0.551       107
+weighted avg      0.629     0.551     0.552       107
+
+[Epoch 24] train: loss=0.1840 acc=0.997 | val: loss=1.0248 acc=0.607 macroAUC=0.807
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.750     0.600     0.667        35
+   pneumonia      0.490     0.667     0.565        36
+      Normal      0.667     0.556     0.606        36
+
+    accuracy                          0.607       107
+   macro avg      0.635     0.607     0.612       107
+weighted avg      0.634     0.607     0.612       107
+
+[Epoch 25] train: loss=0.1994 acc=0.991 | val: loss=1.0186 acc=0.598 macroAUC=0.797
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.651     0.800     0.718        35
+   pneumonia      0.500     0.361     0.419        36
+      Normal      0.605     0.639     0.622        36
+
+    accuracy                          0.598       107
+   macro avg      0.585     0.600     0.586       107
+weighted avg      0.585     0.598     0.585       107
+
+[Epoch 26] train: loss=0.2002 acc=0.988 | val: loss=1.0987 acc=0.579 macroAUC=0.760
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.679     0.543     0.603        35
+   pneumonia      0.459     0.472     0.466        36
+      Normal      0.619     0.722     0.667        36
+
+    accuracy                          0.579       107
+   macro avg      0.586     0.579     0.579       107
+weighted avg      0.585     0.579     0.578       107
+
+[Epoch 27] train: loss=0.1949 acc=0.989 | val: loss=1.1621 acc=0.523 macroAUC=0.745
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.714     0.429     0.536        35
+   pneumonia      0.392     0.556     0.460        36
+      Normal      0.600     0.583     0.592        36
+
+    accuracy                          0.523       107
+   macro avg      0.569     0.522     0.529       107
+weighted avg      0.567     0.523     0.529       107
+
+[Epoch 28] train: loss=0.1920 acc=0.993 | val: loss=1.0468 acc=0.626 macroAUC=0.791
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.574     0.886     0.697        35
+   pneumonia      0.667     0.444     0.533        36
+      Normal      0.690     0.556     0.615        36
+
+    accuracy                          0.626       107
+   macro avg      0.643     0.629     0.615       107
+weighted avg      0.644     0.626     0.614       107
+
+[Epoch 29] train: loss=0.1847 acc=0.996 | val: loss=1.4341 acc=0.467 macroAUC=0.757
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.800     0.229     0.356        35
+   pneumonia      0.395     0.944     0.557        36
+      Normal      0.727     0.222     0.340        36
+
+    accuracy                          0.467       107
+   macro avg      0.641     0.465     0.418       107
+weighted avg      0.639     0.467     0.418       107
+
+[Epoch 30] train: loss=0.2005 acc=0.988 | val: loss=1.2587 acc=0.505 macroAUC=0.747
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.750     0.429     0.545        35
+   pneumonia      0.406     0.778     0.533        36
+      Normal      0.611     0.306     0.407        36
+
+    accuracy                          0.505       107
+   macro avg      0.589     0.504     0.495       107
+weighted avg      0.587     0.505     0.495       107
+
+[Epoch 31] train: loss=0.1980 acc=0.988 | val: loss=1.0620 acc=0.598 macroAUC=0.786
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.714     0.429     0.536        35
+   pneumonia      0.571     0.444     0.500        36
+      Normal      0.569     0.917     0.702        36
+
+    accuracy                          0.598       107
+   macro avg      0.618     0.597     0.579       107
+weighted avg      0.617     0.598     0.580       107
+
+[Epoch 32] train: loss=0.1871 acc=0.997 | val: loss=1.0316 acc=0.598 macroAUC=0.780
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.600     0.771     0.675        35
+   pneumonia      0.500     0.306     0.379        36
+      Normal      0.650     0.722     0.684        36
+
+    accuracy                          0.598       107
+   macro avg      0.583     0.600     0.580       107
+weighted avg      0.583     0.598     0.579       107
+
+[Epoch 33] train: loss=0.1905 acc=0.997 | val: loss=1.2085 acc=0.598 macroAUC=0.747
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.655     0.543     0.594        35
+   pneumonia      0.481     0.694     0.568        36
+      Normal      0.769     0.556     0.645        36
+
+    accuracy                          0.598       107
+   macro avg      0.635     0.598     0.602       107
+weighted avg      0.635     0.598     0.602       107
+
+[Epoch 34] train: loss=0.1971 acc=0.988 | val: loss=1.1656 acc=0.617 macroAUC=0.763
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.697     0.657     0.676        35
+   pneumonia      0.500     0.639     0.561        36
+      Normal      0.714     0.556     0.625        36
+
+    accuracy                          0.617       107
+   macro avg      0.637     0.617     0.621       107
+weighted avg      0.637     0.617     0.620       107
+
+[Epoch 35] train: loss=0.1796 acc=0.996 | val: loss=1.0775 acc=0.626 macroAUC=0.776
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.667     0.743     0.703        35
+   pneumonia      0.559     0.528     0.543        36
+      Normal      0.647     0.611     0.629        36
+
+    accuracy                          0.626       107
+   macro avg      0.624     0.627     0.625       107
+weighted avg      0.624     0.626     0.624       107
+
+[Epoch 36] train: loss=0.1772 acc=0.996 | val: loss=1.2886 acc=0.570 macroAUC=0.738
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.714     0.571     0.635        35
+   pneumonia      0.444     0.556     0.494        36
+      Normal      0.618     0.583     0.600        36
+
+    accuracy                          0.570       107
+   macro avg      0.592     0.570     0.576       107
+weighted avg      0.591     0.570     0.576       107
+
+[Epoch 37] train: loss=0.1872 acc=0.992 | val: loss=1.0399 acc=0.636 macroAUC=0.781
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.750     0.686     0.716        35
+   pneumonia      0.526     0.556     0.541        36
+      Normal      0.649     0.667     0.658        36
+
+    accuracy                          0.636       107
+   macro avg      0.642     0.636     0.638       107
+weighted avg      0.641     0.636     0.637       107
+
+[Epoch 38] train: loss=0.1736 acc=0.999 | val: loss=1.0464 acc=0.664 macroAUC=0.796
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.692     0.771     0.730        35
+   pneumonia      0.625     0.417     0.500        36
+      Normal      0.659     0.806     0.725        36
+
+    accuracy                          0.664       107
+   macro avg      0.659     0.665     0.652       107
+weighted avg      0.658     0.664     0.651       107
+
+[Epoch 39] train: loss=0.1750 acc=0.999 | val: loss=1.0337 acc=0.664 macroAUC=0.800
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.806     0.714     0.758        35
+   pneumonia      0.625     0.417     0.500        36
+      Normal      0.596     0.861     0.705        36
+
+    accuracy                          0.664       107
+   macro avg      0.676     0.664     0.654       107
+weighted avg      0.675     0.664     0.653       107
+
+[Epoch 40] train: loss=0.1723 acc=1.000 | val: loss=0.9899 acc=0.682 macroAUC=0.807
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.711     0.771     0.740        35
+   pneumonia      0.667     0.444     0.533        36
+      Normal      0.667     0.833     0.741        36
+
+    accuracy                          0.682       107
+   macro avg      0.681     0.683     0.671       107
+weighted avg      0.681     0.682     0.671       107
+
+[Epoch 41] train: loss=0.1726 acc=1.000 | val: loss=1.0563 acc=0.682 macroAUC=0.783
+Per-class (val):
+              precision    recall  f1-score   support
+
+         CHF      0.689     0.886     0.775        35
+   pneumonia      0.700     0.389     0.500        36
+      Normal      0.667     0.778     0.718        36
+
+    accuracy                          0.682       107
+   macro avg      0.685     0.684     0.664       107
+weighted avg      0.685     0.682     0.663       107
+

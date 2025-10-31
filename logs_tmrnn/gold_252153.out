@@ -1,0 +1,18 @@
+Starting training at: Thu Oct 30 09:05:46 AM CDT 2025
+EGDCXRDataset ready: 756 cases | regions=4 | bbox_classes=17
+EGDCXRDataset ready: 107 cases | regions=4 | bbox_classes=17
+Epoch 001 | train: loss=4.5678 cls=0.9546 txt=3.6132 | val: loss=1.5706 acc=0.327
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 002 | train: loss=3.7978 cls=0.7022 txt=3.0956 | val: loss=1.8241 acc=0.327
+Epoch 003 | train: loss=3.5117 cls=0.6220 txt=2.8897 | val: loss=0.9219 acc=0.505
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 004 | train: loss=3.3553 cls=0.5384 txt=2.8169 | val: loss=0.6495 acc=0.757
+  ↳ saved best checkpoint to: runs/checkpoints/tmrnn_egd_cxr_best.pt
+Epoch 005 | train: loss=3.2529 cls=0.5048 txt=2.7481 | val: loss=1.4884 acc=0.514
+Epoch 006 | train: loss=3.1190 cls=0.4466 txt=2.6723 | val: loss=0.7373 acc=0.720
+Epoch 007 | train: loss=3.0589 cls=0.4019 txt=2.6570 | val: loss=1.5418 acc=0.495
+Epoch 008 | train: loss=2.9693 cls=0.3289 txt=2.6404 | val: loss=0.6756 acc=0.757
+Epoch 009 | train: loss=2.8692 cls=0.2764 txt=2.5927 | val: loss=0.8431 acc=0.729
+Early stopping.
+Done.
+Finished at: Thu Oct 30 09:28:39 AM CDT 2025

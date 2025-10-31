@@ -1,0 +1,32 @@
+  0%|          | 0/24 [00:00<?, ?it/s]                                      Traceback (most recent call last):
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_tmrnn.py", line 249, in <module>
+    main()
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_tmrnn.py", line 224, in main
+    tr_loss, tr_cls, tr_txt, tr_acc = run_one_epoch(
+                                      ^^^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/main_train_tmrnn.py", line 88, in run_one_epoch
+    cls_logits, txt_logits = model(batch, transcripts_ids=transcripts_ids)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/conda_envs/wsi-agent/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/conda_envs/wsi-agent/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/folder_04_ma/gaze-01/src/models/tmrnn.py", line 268, in forward
+    img_vec = self.img_encoder(images)         # [B, 1024]
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/conda_envs/wsi-agent/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/conda_envs/wsi-agent/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/conda_envs/wsi-agent/lib/python3.11/site-packages/torchxrayvision/models.py", line 356, in forward
+    out = op_norm(out, self.op_threshs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/project/hnguyen2/mvu9/conda_envs/wsi-agent/lib/python3.11/site-packages/torchxrayvision/models.py", line 495, in op_norm
+    mask_leq = (outputs < op_threshs) & ~torch.isnan(op_threshs)
+                ^^^^^^^^^^^^^^^^^^^^
+RuntimeError: The size of tensor a (1024) must match the size of tensor b (18) at non-singleton dimension 1
+srun: error: compute-0-9: task 0: Exited with exit code 1
